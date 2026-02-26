@@ -13,7 +13,6 @@ MAX_REVISIONS = 30
 
 
 class RevisionManager:
-    """Manages in-memory revision history for a presentation deck."""
 
     def __init__(self):
         self.revisions = []
@@ -71,9 +70,8 @@ deck_state = {
 }
 
 
-
+#Dropdown choices for slide selection
 def get_slide_choices():
-    """Build dropdown choices for slide selection."""
     if deck_state["skeleton"] is None:
         return []
     choices = []
@@ -83,15 +81,13 @@ def get_slide_choices():
         choices.append(f"[שקף {num}] {desc}")
     return choices
 
-
+#Slide_num dropdown selection
 def parse_slide_num_from_selection(selection: str) -> str | None:
-    """Extract slide_num from dropdown selection string."""
     match = re.match(r"\[שקף (.+?)\]", selection)
     return match.group(1) if match else None
 
-
+#Find a slide by slide_num
 def get_slide_by_num(slide_num: str) -> dict | None:
-    """Find a slide in the skeleton by slide_num."""
     if deck_state["skeleton"] is None:
         return None
     for slide in deck_state["skeleton"]["slides"]:
@@ -101,7 +97,6 @@ def get_slide_by_num(slide_num: str) -> dict | None:
 
 
 def format_slide_preview(slide: dict) -> str:
-    """Format a slide's objects as a readable preview."""
     lines = []
     lines.append(f"**שקף {slide.get('slide_num')}:** {slide.get('slide_description', '')}")
     lines.append(f"**סטטוס:** {slide.get('generation_status', 'ממתין')}")
@@ -113,8 +108,8 @@ def format_slide_preview(slide: dict) -> str:
         status = obj.get("validation_status", "לא נוצר")
         content = obj.get("generated_content", "")
 
-        icon = {"validated": "", "skipped": "⏭", "manual_fix": "",
-                "edited_by_agent": "", "failed_validation": ""}.get(status, "")
+        icon = {"validated": "✅", "skipped": "⏭️", "manual_fix": "✏️",
+                "edited_by_agent": "🤖", "failed_validation": "❌"}.get(status, "⏳")
 
         lines.append(f"---")
         lines.append(f"{icon} **{obj_id}** — {obj_name}")
@@ -124,13 +119,79 @@ def format_slide_preview(slide: dict) -> str:
 
     return "\n".join(lines)
 
+#HTML preview
+def render_slide_html(slide: dict, slide_index: int, total_slides: int) -> str:
+    slide_num = slide.get("slide_num", "?")
+    slide_desc = slide.get("slide_description", "")
+
+    title_text = ""
+    body_parts = []
+
+    for obj in slide.get("slide_objects", []):
+        obj_name = obj.get("object_name", "").lower()
+        content = obj.get("generated_content", "")
+        status = obj.get("validation_status", "")
+
+        if not content:
+            continue
+
+        if "כותרת" in obj_name or "תת" in obj_name:
+            title_text = content
+        else:
+            icon = {"validated": "✅", "skipped": "⏭️", "manual_fix": "✏️",
+                    "edited_by_agent": "🤖", "failed_validation": "❌"}.get(status, "⏳")
+
+            #Convert to HTML list
+            if "\n" in content and any(line.strip().startswith(("-", "•", "–")) for line in content.split("\n")):
+                items = ""
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if line.startswith(("-", "•", "–")):
+                        line = line.lstrip("-•– ").strip()
+                    if line:
+                        items += f"<li>{line}</li>"
+                body_parts.append(f'<div class="slide-obj-label">{icon} {obj.get("object_name", "")}</div><ul class="slide-bullets">{items}</ul>')
+            else:
+                body_parts.append(f'<div class="slide-obj-label">{icon} {obj.get("object_name", "")}</div><p class="slide-text">{content}</p>')
+
+    if not title_text:
+        title_text = slide_desc
+
+    body_html = "\n".join(body_parts) if body_parts else '<p class="slide-empty">אין תוכן</p>'
+
+    return f'''
+    <div class="slide-card">
+        <div class="slide-title-bar">{title_text}</div>
+        <div class="slide-body">{body_html}</div>
+        <div class="slide-footer">שקף {slide_num} מתוך {total_slides}</div>
+    </div>
+    '''
+
+
+def render_deck_preview(skeleton: dict = None) -> str:
+    if skeleton is None:
+        skeleton = deck_state.get("skeleton")
+    if skeleton is None:
+        return '<div class="preview-empty">אין מצגת לתצוגה מקדימה</div>'
+
+    slides = skeleton.get("slides", [])
+    total = len(slides)
+
+    slides_html = "\n".join(
+        render_slide_html(slide, i, total) for i, slide in enumerate(slides)
+    )
+
+    return f'''
+    <div class="deck-preview">
+        <div class="preview-header">📊 תצוגה מקדימה — {total} שקפים</div>
+        <div class="slides-container">
+            {slides_html}
+        </div>
+    </div>
+    '''
+
 
 def apply_edits_to_skeleton(edit_data: dict, scope_slide_num: str = None) -> int:
-    """
-    Apply edits from LLM response to the skeleton.
-    If scope_slide_num is provided, only apply to that slide.
-    Returns number of applied edits.
-    """
     skeleton = deck_state["skeleton"]
     applied_count = 0
 
@@ -142,11 +203,10 @@ def apply_edits_to_skeleton(edit_data: dict, scope_slide_num: str = None) -> int
 
         matched = False
 
-        # If scoped to a slide, override the slide_num
         if scope_slide_num:
             edit_slide_num = scope_slide_num
 
-        # Pass 1: Match by slide_num + (object_id or object_name)
+        #Pass 1: Match by slide_num + (object_id or object_name)
         for slide in skeleton["slides"]:
             if str(slide.get("slide_num", "")) == edit_slide_num:
                 for obj in slide.get("slide_objects", []):
@@ -162,7 +222,7 @@ def apply_edits_to_skeleton(edit_data: dict, scope_slide_num: str = None) -> int
                 if matched:
                     break
 
-        # Pass 2: Fallback — object_name across all slides (it's unique)
+        #Pass 2: Fallback — object_name across all slides (it's unique)
         if not matched and edit_object_name:
             for slide in skeleton["slides"]:
                 for obj in slide.get("slide_objects", []):
@@ -177,11 +237,9 @@ def apply_edits_to_skeleton(edit_data: dict, scope_slide_num: str = None) -> int
 
     return applied_count
 
-
+#Edit Agent
 def call_edit_llm(prompt: str) -> str:
-    """Call the LLM for edit operations."""
-    from huggingface_hub import InferenceClient
-    import os
+
 
     agent = deck_state["agent"]
     response = InferenceClient(
@@ -197,7 +255,6 @@ def call_edit_llm(prompt: str) -> str:
 
 
 def parse_llm_json(raw_response: str) -> dict:
-    """Parse JSON from LLM response, handling markdown fences."""
     cleaned = raw_response.strip()
     if cleaned.startswith("```"):
         cleaned = "\n".join(cleaned.split("\n")[1:])
@@ -208,9 +265,8 @@ def parse_llm_json(raw_response: str) -> dict:
 
 
 def load_and_generate(file, user_prompt, document_text):
-    """Load template and generate presentation in one step."""
     if file is None:
-        return "❌ לא נבחר קובץ תבנית", "{}"
+        return "❌ לא נבחר קובץ תבנית", '<div class="preview-empty">אין מצגת לתצוגה מקדימה</div>', "{}"
 
     content = file.read().decode("utf-8") if hasattr(file, "read") else open(file, "r", encoding="utf-8").read()
     skeleton = json.loads(content)
@@ -238,18 +294,18 @@ def load_and_generate(file, user_prompt, document_text):
     )
 
     full_json = json.dumps(skeleton, indent=2, ensure_ascii=False)
-    return "✅ המצגת נוצרה בהצלחה", full_json
+    preview_html = render_deck_preview(skeleton)
+    return "✅ המצגת נוצרה בהצלחה", preview_html, full_json
 
 
-#  Deck-Level Chat Edit
+#Deck level chat edit
 
 def deck_chat_edit(user_message, chat_history):
-    """Process a free-text edit instruction across the entire deck."""
     if deck_state["skeleton"] is None:
         chat_history = chat_history or []
         chat_history.append({"role": "user", "content": user_message})
         chat_history.append({"role": "assistant", "content": "❌ יש ליצור מצגת קודם בלשונית 'יצירת מצגת'."})
-        return chat_history, json.dumps({}, indent=2, ensure_ascii=False), gr.update(choices=[])
+        return chat_history, '<div class="preview-empty">התצוגה תתעדכן לאחר עריכה</div>', json.dumps({}, indent=2, ensure_ascii=False), gr.update(choices=[])
 
     skeleton = deck_state["skeleton"]
     rev_manager = deck_state["revision_manager"]
@@ -264,8 +320,6 @@ def deck_chat_edit(user_message, chat_history):
 המצגת הנוכחית (JSON):
 {deck_json}
 
-═══ מקורות מידע (מקור האמת) ═══
-
 ההנחיה המקורית של המשתמש:
 {deck_state.get("user_prompt", "")}
 
@@ -275,9 +329,6 @@ def deck_chat_edit(user_message, chat_history):
 בקשת העריכה:
 {user_message}
 
-═══════════════════════════════════
-
-
 חשוב — מבנה המצגת:
 - כל שקף מזוהה לפי "slide_num" (מספר שלם: 1, 2, 3...).
 - כל אובייקט בשקף מזוהה לפי:
@@ -285,17 +336,9 @@ def deck_chat_edit(user_message, chat_history):
   - "object_name" — שם תיאורי ייחודי כמו "תוכן רקע האירוע".
 - לכן, כדי לזהות אובייקט באופן חד-משמעי, יש לציין גם slide_num וגם object_id או object_name.
 
-כללי עריכה קריטיים:
-1. בצע אך ורק את השינוי שהמשתמש ביקש — לא יותר ולא פחות.
-2. אם המשתמש מבקש להוסיף מידע ספציפי (כמו תאריך, מיקום, שם) — הוסף בדיוק את מה שנאמר. אל תמציא פרטים נוספים.
-3. אם המשתמש מבקש לשנות סגנון (קצר, פורמלי, וכו') — שנה את הסגנון בלבד, שמור על העובדות הקיימות.
-4. אל תמציא עובדות, תאריכים, שמות, או מידע שלא מופיע בהנחיית המשתמש, במסמך המקור, או בבקשת העריכה.
-5. אל תרחיב את התוכן מעבר למה שנדרש. אם המשתמש אמר "הוסף את התאריך מרץ 2025" — הוסף רק את התאריך, אל תכתוב פסקה שלמה.
-6. כל התוכן חייב להיות בעברית תקינה.
-
 עליך:
 1. לזהות את האובייקט/ים שהמשתמש מתייחס אליהם.
-2. לבצע את השינוי המבוקש על התוכן הקיים (generated_content). אם התוכן הקיים ריק או "לא סופק מספיק מידע" — צור תוכן חדש רק על בסיס המידע שסופק.
+2. לבצע את השינוי המבוקש על התוכן הקיים (generated_content). אם התוכן הקיים ריק או "לא סופק מספיק מידע" — צור תוכן חדש לפי ההנחיה.
 3. להחזיר תשובה בפורמט JSON בלבד, ללא טקסט נוסף:
 
 {{
@@ -344,15 +387,15 @@ def deck_chat_edit(user_message, chat_history):
 
     chat_history.append({"role": "assistant", "content": assistant_msg})
     full_json = json.dumps(skeleton, indent=2, ensure_ascii=False)
+    preview_html = render_deck_preview(skeleton)
     revision_choices = rev_manager.get_revision_choices()
 
-    return chat_history, full_json, gr.update(choices=revision_choices)
+    return chat_history, preview_html, full_json, gr.update(choices=revision_choices)
 
 
-#  Slide-Level Chat Edit
+# Slide level chat edit
 
 def on_slide_selected(slide_selection):
-    """When a slide is selected, show its preview."""
     if not slide_selection or deck_state["skeleton"] is None:
         return "בחר שקף כדי לראות את התוכן שלו"
 
@@ -366,7 +409,6 @@ def on_slide_selected(slide_selection):
 
 
 def slide_chat_edit(user_message, slide_selection, chat_history):
-    """Process an edit scoped to a specific slide."""
     if deck_state["skeleton"] is None:
         chat_history = chat_history or []
         chat_history.append({"role": "user", "content": user_message})
@@ -402,8 +444,6 @@ def slide_chat_edit(user_message, slide_selection, chat_history):
 השקף הנוכחי (JSON):
 {slide_json}
 
-═══ מקורות מידע (מקור האמת) ═══
-
 ההנחיה המקורית של המשתמש:
 {deck_state.get("user_prompt", "")}
 
@@ -413,8 +453,6 @@ def slide_chat_edit(user_message, slide_selection, chat_history):
 בקשת העריכה:
 {user_message}
 
-═══════════════════════════════════
-
 חשוב — מבנה השקף:
 - השקף הוא שקף מספר {slide_num}.
 - כל אובייקט בשקף מזוהה לפי:
@@ -422,17 +460,9 @@ def slide_chat_edit(user_message, slide_selection, chat_history):
   - "object_name" — שם תיאורי כמו "תוכן רקע האירוע".
 - המשתמש עשוי להתייחס לאובייקט לפי object_id, object_name, או תיאור כללי.
 
-כללי עריכה קריטיים:
-1. בצע אך ורק את השינוי שהמשתמש ביקש — לא יותר ולא פחות.
-2. אם המשתמש מבקש להוסיף מידע ספציפי (כמו תאריך, מיקום, שם) — הוסף בדיוק את מה שנאמר. אל תמציא פרטים נוספים.
-3. אם המשתמש מבקש לשנות סגנון (קצר, פורמלי, וכו') — שנה את הסגנון בלבד, שמור על העובדות הקיימות.
-4. אל תמציא עובדות, תאריכים, שמות, או מידע שלא מופיע בהנחיית המשתמש, במסמך המקור, או בבקשת העריכה.
-5. אל תרחיב את התוכן מעבר למה שנדרש. אם המשתמש אמר "הוסף את התאריך מרץ 2025" — הוסף רק את התאריך, אל תכתוב פסקה שלמה.
-6. כל התוכן חייב להיות בעברית תקינה.
-
 עליך:
 1. לזהות את האובייקט/ים שהמשתמש מתייחס אליהם בתוך השקף הזה בלבד.
-2. לבצע את השינוי המבוקש על התוכן הקיים (generated_content). אם התוכן הקיים ריק או "לא סופק מספיק מידע" — צור תוכן חדש רק על בסיס המידע שסופק.
+2. לבצע את השינוי המבוקש על התוכן הקיים (generated_content). אם התוכן הקיים ריק או "לא סופק מספיק מידע" — צור תוכן חדש לפי ההנחיה.
 3. להחזיר תשובה בפורמט JSON בלבד, ללא טקסט נוסף:
 
 {{
@@ -488,10 +518,9 @@ def slide_chat_edit(user_message, slide_selection, chat_history):
     return chat_history, preview, gr.update(choices=revision_choices)
 
 
-#  Revision Management
+# Revision management
 
 def restore_revision(revision_selection):
-    """Restore the deck to a previous revision (navigation only)."""
     if not revision_selection or deck_state["skeleton"] is None:
         return "❌ יש לבחור גרסה", json.dumps(deck_state.get("skeleton", {}), indent=2, ensure_ascii=False)
 
@@ -513,10 +542,9 @@ def restore_revision(revision_selection):
     return f"✅ שוחזר לגרסה {revision_id} — העריכה הבאה תיצור גרסה חדשה", full_json
 
 
-#  Export
+# Export as a JSON file
 
 def export_json():
-    """Export the current deck state as a JSON file."""
     if deck_state["skeleton"] is None:
         return None
 
@@ -526,7 +554,7 @@ def export_json():
 
     return output_path
 
-#  Gradio
+
 
 def build_app():
 
@@ -535,17 +563,63 @@ def build_app():
         theme=gr.themes.Soft(),
         css="""
         .rtl-text { direction: rtl; text-align: right; }
+
+        .deck-preview { direction: rtl; text-align: right; }
+        .preview-header {
+            font-size: 18px; font-weight: bold; margin-bottom: 16px;
+            padding: 8px 12px; background: #f0f4ff; border-radius: 8px;
+            text-align: center;
+        }
+        .slides-container { display: flex; flex-direction: column; gap: 24px; }
+        .slide-card {
+            border: 2px solid #d0d5dd; border-radius: 12px;
+            background: #bada55; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            aspect-ratio: 16 / 9; max-width: 720px; margin: 0 auto;
+            display: flex; flex-direction: column;
+        }
+        .slide-title-bar {
+            background: linear-gradient(135deg, #1e3a5f, #2d5f8a);
+            color: white; padding: 20px 28px;
+            font-size: 22px; font-weight: bold;
+            text-align: right; direction: rtl;
+        }
+        .slide-body {
+            padding: 20px 28px; flex: 1;
+            direction: rtl; text-align: right;
+            overflow-y: auto; font-size: 14px; line-height: 1.7;
+        }
+        .slide-obj-label {
+            font-size: 12px; color: #667; margin-top: 8px; margin-bottom: 2px;
+            font-weight: bold;
+        }
+        .slide-bullets {
+            margin: 4px 20px 12px 0; padding: 0;
+            list-style-type: disc; direction: rtl;
+        }
+        .slide-bullets li { margin-bottom: 4px; }
+        .slide-text { margin: 4px 0 12px 0; }
+        .slide-empty { color: #999; font-style: italic; text-align: center; padding: 40px; }
+        .slide-footer {
+            background: #f7f8fa; padding: 6px 28px;
+            font-size: 12px; color: #888;
+            text-align: left; border-top: 1px solid #eee;
+        }
+        .preview-empty {
+            text-align: center; color: #999; padding: 40px;
+            font-size: 16px; direction: rtl;
+        }
         """
     ) as app:
 
-        gr.Markdown("# 📊 כלי יצירת מצגות", elem_classes=["rtl-text"])
+        gr.Markdown("כלי יצירת מצגות", elem_classes=["rtl-text"])
 
-        # ── Tab 1: Generation ──
-        with gr.Tab("🚀 יצירת מצגת"):
+        #Tab 1: generation
+        with gr.Tab("יצירת מצגת"):
             with gr.Row():
                 with gr.Column(scale=1):
                     template_file = gr.File(
-                        label="📁 קובץ תבנית (JSON)",
+                        label="קובץ תבנית (JSON)",
                         file_types=[".json"]
                     )
 
@@ -557,16 +631,24 @@ def build_app():
                     )
                     document_text_input = gr.Textbox(
                         label="טקסט מסמך (אופציונלי)",
+                        placeholder="הדבק כאן טקסט ממסמך מקור...",
                         lines=5,
                         rtl=True
                     )
 
-            generate_btn = gr.Button("🚀 צור מצגת", variant="primary", size="lg")
+            generate_btn = gr.Button("צור מצגת", variant="primary", size="lg")
             generation_status = gr.Textbox(label="סטטוס", interactive=False, rtl=True)
-            generation_json = gr.Code(label="JSON מצגת", language="json", lines=20)
 
-        # ── Tab 2: Deck-Level Edit ──
-        with gr.Tab("✏️ עריכת מצגת"):
+            gr.Markdown("תצוגה מקדימה", elem_classes=["rtl-text"])
+            generation_preview = gr.HTML(
+                value='<div class="preview-empty">אין מצגת לתצוגה מקדימה</div>'
+            )
+
+            with gr.Accordion("JSON מצגת", open=False):
+                generation_json = gr.Code(label="JSON מצגת", language="json", lines=20)
+
+        # Tab 2: deck level edit 
+        with gr.Tab("עריכת מצגת"):
             gr.Markdown()
 
             deck_chatbot = gr.Chatbot(
@@ -586,11 +668,17 @@ def build_app():
                 )
                 deck_send_btn = gr.Button("שלח", variant="primary", scale=1)
 
-            deck_edit_json = gr.Code(label="JSON מעודכן", language="json", lines=15)
+            gr.Markdown("תצוגה מקדימה", elem_classes=["rtl-text"])
+            deck_edit_preview = gr.HTML(
+                value='<div class="preview-empty">התצוגה תתעדכן לאחר עריכה</div>'
+            )
 
-            # ── Revision History ──
+            with gr.Accordion("JSON מעודכן", open=False):
+                deck_edit_json = gr.Code(label="JSON מעודכן", language="json", lines=15)
+
+            #Revision history
             gr.Markdown("---")
-            gr.Markdown("### 📜 היסטוריית גרסאות", elem_classes=["rtl-text"])
+            gr.Markdown("היסטוריית גרסאות", elem_classes=["rtl-text"])
 
             with gr.Row():
                 revision_dropdown = gr.Dropdown(
@@ -599,17 +687,17 @@ def build_app():
                     interactive=True,
                     scale=3
                 )
-                restore_btn = gr.Button("⏪ שחזר גרסה", variant="secondary", scale=1)
+                restore_btn = gr.Button("שחזר גרסה", variant="secondary", scale=1)
 
             restore_status = gr.Textbox(label="סטטוס שחזור", interactive=False, rtl=True)
 
             gr.Markdown("---")
             with gr.Row():
-                export_btn = gr.Button("💾 ייצוא JSON", variant="secondary")
+                export_btn = gr.Button("ייצוא JSON", variant="secondary")
                 export_file = gr.File(label="קובץ לייצוא")
 
-        # ── Tab 3: Slide-Level Edit ──
-        with gr.Tab("🔍 עריכת שקף"):
+        #Tab 3: slide level edit ──
+        with gr.Tab("עריכת שקף"):
             gr.Markdown()
 
             slide_selector = gr.Dropdown(
@@ -633,37 +721,35 @@ def build_app():
             with gr.Row():
                 slide_chat_input = gr.Textbox(
                     label="הנחיית עריכה לשקף",
-                    placeholder="כתוב כאן מה לשנות בשקף הנבחר...",
                     lines=2,
                     rtl=True,
                     scale=4
                 )
                 slide_send_btn = gr.Button("שלח", variant="primary", scale=1)
 
-            # Revision dropdown shared reference for slide edits
+            #Revision dropdown
             slide_revision_dropdown = gr.Dropdown(
-                label="📜 היסטוריית גרסאות",
+                label="היסטוריית גרסאות",
                 choices=[],
-                interactive=False  # display only, restore from deck tab
+                interactive=False
             )
 
-        # ── Event Bindings ──
 
-        # Tab 1: Generation
+        #Tab 1: initial output
         generate_btn.click(
             fn=load_and_generate,
             inputs=[template_file, user_prompt_input, document_text_input],
-            outputs=[generation_status, generation_json]
+            outputs=[generation_status, generation_preview, generation_json]
         ).then(
             fn=lambda: gr.update(choices=get_slide_choices()),
             outputs=[slide_selector]
         )
 
-        # Tab 2: Deck-level edit
+        #Tab 2: deck level edit
         deck_send_btn.click(
             fn=deck_chat_edit,
             inputs=[deck_chat_input, deck_chatbot],
-            outputs=[deck_chatbot, deck_edit_json, revision_dropdown]
+            outputs=[deck_chatbot, deck_edit_preview, deck_edit_json, revision_dropdown]
         ).then(
             fn=lambda: ("", gr.update(choices=get_slide_choices())),
             outputs=[deck_chat_input, slide_selector]
@@ -675,7 +761,7 @@ def build_app():
         deck_chat_input.submit(
             fn=deck_chat_edit,
             inputs=[deck_chat_input, deck_chatbot],
-            outputs=[deck_chatbot, deck_edit_json, revision_dropdown]
+            outputs=[deck_chatbot, deck_edit_preview, deck_edit_json, revision_dropdown]
         ).then(
             fn=lambda: ("", gr.update(choices=get_slide_choices())),
             outputs=[deck_chat_input, slide_selector]
@@ -696,7 +782,7 @@ def build_app():
             outputs=[export_file]
         )
 
-        # Tab 3: Slide-level edit
+        #Tab 3: slide level edit
         slide_selector.change(
             fn=on_slide_selected,
             inputs=[slide_selector],
