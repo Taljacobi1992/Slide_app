@@ -1,1 +1,1 @@
-Tool that generate PPTX slides based on template and prompt
+Slide generator tool, with GPT-oss-120b and Gradio UI
