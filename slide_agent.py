@@ -1,4 +1,4 @@
-import re
+#import re
 import os
 from dotenv import load_dotenv
 from langsmith import traceable
@@ -19,9 +19,9 @@ model_name = "openai/gpt-oss-120b"
 #  Validator agent
 
 class ValidatorAgent:
- 
-    NO_INFO_MESSAGE = "לא סופק מספיק מידע להצגת תוכן זה."
 
+    NO_INFO_MESSAGE = "לא סופק מספיק מידע להצגת תוכן זה."
+    
     @traceable(name="Validator Agent")
     def __init__(self, model_name=model_name, max_retries=2):
         self.model_name = model_name
@@ -35,12 +35,12 @@ class ValidatorAgent:
                 "object_description",
                 "document_text"
             ],
-            template="""אתה בודק תוכן עבור מצגות מקצועיות. תפקידך למנוע הזיות (hallucinations) ותוכן בדוי, אך גם לוודא שמידע אמיתי שסופק אכן מנוצל.
+            template="""אתה בודק תוכן עבור מצגות מקצועיות. תפקידך למנוע הזיות ותוכן בדוי, תוך אישור תוכן לגיטימי.
 
 התוכן שנוצר:
 {generated_content}
 
-═══ מקורות המידע המותרים (מקור האמת) ═══
+═══ מקורות המידע המותרים ═══
 
 הנחיית המשתמש:
 {user_prompt}
@@ -48,57 +48,35 @@ class ValidatorAgent:
 מסמך מקור:
 {document_text}
 
-═══ הנחיות פורמט בלבד (לא מקור מידע!) ═══
+═══ הנחיות פורמט בלבד ═══
 
-תיאור השקף:
-{slide_description}
+תיאור השקף: {slide_description}
+תיאור האובייקט: {object_description}
 
-תיאור האובייקט (פורמט בלבד):
-{object_description}
+═══════════════════════════
 
-═══════════════════════════════════════════
+השאלה המרכזית: "האם התוכן סותר את המקורות או מכיל עובדות שלא קיימות בהם?"
 
-כללי בדיקה קריטיים:
+אשר ✅ אם: התוכן מסכם/מנסח מחדש/מארגן מידע מהמקורות, או מסקנות סבירות הנגזרות מהמידע.
+דחה ❌ אם: עובדות ספציפיות שלא במקורות, תוכן ריק, תוכן גנרי לחלוטין, או "לא סופק מספיק מידע" כשיש מידע רלוונטי.
 
-הבדיקה המרכזית — סיווג התוכן לשלוש קטגוריות:
-
-א. חילוץ ועיבוד מידע (תקין ✅):
-   התוכן מבוסס על מידע מהנחיית המשתמש או מהמסמך, גם אם הוא מנוסח מחדש, מסוכם, מאורגן מחדש, או מותאם לפורמט השקף. זו בדיוק המטרה.
-
-ב. הזיה / תוכן בדוי (לא תקין ❌):
-   התוכן מכיל עובדות, פרטים, תאריכים, שמות, או מידע שלא מופיע בהנחיית המשתמש או במסמך.
-   שים לב במיוחד:
-   - תוכן שנשאב מ"תיאור האובייקט" — זו הזיה! תיאור האובייקט הוא הנחיית פורמט בלבד.
-   - תוכן גנרי שנשמע מקצועי אבל לא מבוסס על מידע ספציפי מהמקורות — זו הזיה.
-
-ג. סירוב מוצדק (תקין ✅):
-   אם התוכן הוא "לא סופק מספיק מידע להצגת תוכן זה." — זה תקין רק אם באמת אין מידע רלוונטי במקורות.
-   אבל: אם המשתמש או המסמך סיפקו מידע רלוונטי והתוכן בכל זאת אומר "לא סופק מספיק מידע" — זה לא תקין. יש לחלץ את המידע הקיים.
-
-בדיקות נוספות:
-4. שפה — האם התוכן בעברית תקינה בלבד?
-5. חזרות — האם יש חזרות מיותרות?
-6. פורמט — האם הפורמט מתאים?
-
-החזר תשובה בפורמט הבא בלבד:
+החזר בדיוק בפורמט הזה (3 שורות):
 VALID: כן/לא
-REASON: [סיבה קצרה אם לא תקין]
-FEEDBACK: [הנחיה ספציפית לשיפור אם לא תקין]
+REASON: סיבה קצרה
+FEEDBACK: הנחיה לשיפור (או "אין" אם תקין)
 """
         )
 
-    def validate(
-        self,
-        generated_content: str,
-        user_prompt: str,
-        slide_description: str,
-        object_description: str,
-        document_text: str
-    ) -> dict:
-        """
-        Validates generated content.
-        Returns: {"is_valid": bool, "reason": str, "feedback": str}
-        """
+    def validate(self, generated_content, user_prompt, slide_description, object_description, document_text):
+
+        if not generated_content or not generated_content.strip():
+            return {
+                "is_valid": False,
+                "reason": "התוכן שנוצר ריק",
+                "feedback": "יש ליצור תוכן בפועל על בסיס מקורות המידע",
+                "raw_response": "[PRE-CHECK: empty content rejected]"
+            }
+
         formatted_prompt = self.validation_prompt.format(
             generated_content=generated_content,
             user_prompt=user_prompt,
@@ -107,51 +85,83 @@ FEEDBACK: [הנחיה ספציפית לשיפור אם לא תקין]
             document_text=document_text or "לא סופק"
         )
 
-        response = client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "user", "content": formatted_prompt}
-            ],
-            temperature=0.1,
-            max_tokens=300
-        )
+        try:
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": formatted_prompt}],
+                temperature=0.1,
+                max_tokens=300
+            )
+            result_text = response.choices[0].message.content or ""
+            return self._parse_validation_response(result_text)
 
-        result_text = response.choices[0].message.content
-        return self._parse_validation_response(result_text)
+        except Exception as e:
+            return {
+                "is_valid": False,
+                "reason": f"שגיאה בקריאה לסוכן הבדיקה: {str(e)}",
+                "feedback": "נסה שוב",
+                "raw_response": f"[API ERROR: {str(e)}]"
+            }
 
     def _parse_validation_response(self, response_text: str) -> dict:
-        """Parse the structured validation response."""
         result = {
             "is_valid": False,
             "reason": "",
-            "feedback": ""
+            "feedback": "",
+            "raw_response": response_text
         }
 
+        if not response_text or not response_text.strip():
+            result["reason"] = "תשובת הבדיקה ריקה"
+            result["feedback"] = "נסה שוב"
+            return result
+
         try:
-            lines = response_text.strip().split("\n")
+            text = response_text.strip()
+            if text.startswith("```"):
+                text = "\n".join(text.split("\n")[1:])
+            if text.endswith("```"):
+                text = "\n".join(text.split("\n")[:-1])
+            text = text.strip().replace("\\n", "\n")
+
+            lines = text.split("\n")
             for line in lines:
                 line = line.strip()
-                if line.startswith("VALID:"):
-                    value = line.replace("VALID:", "").strip()
-                    result["is_valid"] = value in ("כן", "yes", "Yes", "כן.")
-                elif line.startswith("REASON:"):
-                    result["reason"] = line.replace("REASON:", "").strip()
-                elif line.startswith("FEEDBACK:"):
-                    result["feedback"] = line.replace("FEEDBACK:", "").strip()
-        except Exception:
-            # If parsing fails, treat as invalid to be safe
+                if not line:
+                    continue
+                line_upper = line.upper()
+
+                if line_upper.startswith("VALID"):
+                    value = line.split(":", 1)[-1].strip() if ":" in line else ""
+                    result["is_valid"] = any(v in value for v in ("כן", "yes", "Yes", "כן.", "true", "True"))
+                elif line_upper.startswith("REASON"):
+                    value = line.split(":", 1)[-1].strip() if ":" in line else ""
+                    if value:
+                        result["reason"] = value
+                elif line_upper.startswith("FEEDBACK"):
+                    value = line.split(":", 1)[-1].strip() if ":" in line else ""
+                    if value and value != "אין":
+                        result["feedback"] = value
+
+            if result["is_valid"] and not result["reason"]:
+                result["reason"] = "תקין"
+            if not result["reason"] and not result["is_valid"]:
+                result["reason"] = "לא ניתן לפענח את תשובת הבדיקה"
+                result["feedback"] = response_text[:300]
+
+        except Exception as e:
             result["is_valid"] = False
-            result["reason"] = "שגיאה בפענוח תוצאת הבדיקה"
-            result["feedback"] = "נסה שוב"
+            result["reason"] = f"שגיאה בפענוח: {str(e)}"
+            result["feedback"] = response_text[:300] if response_text else "נסה שוב"
 
         return result
 
 
-
-#  Slide agent
+# ──────────────────────────────────────────────
+#  Slide Agent (with validation chain)
+# ──────────────────────────────────────────────
 
 class SlideAgent:
-
     @traceable(name="Slide Agent")
     def __init__(self, model_name=model_name, language="hebrew", max_retries=2):
         self.language = language
@@ -166,6 +176,8 @@ class SlideAgent:
             max_retries=max_retries
         )
 
+        # ── Simplified generation prompt ──
+        # The generator's job is to WRITE content. Anti-hallucination is the validator's job.
         self.prompt_template = PromptTemplate(
             input_variables=[
                 "user_prompt",
@@ -175,45 +187,33 @@ class SlideAgent:
                 "language_instruction",
                 "validation_feedback"
             ],
-            template="""אתה כותב תוכן מקצועי עבור שקף של מצגת.
+            template="""אתה כותב תוכן עבור שקף במצגת מקצועית.
 
-═══ מקורות מידע (מקור האמת — רק מכאן ניתן לשאוב עובדות) ═══
+המשימה שלך: חלץ מידע רלוונטי מהמקורות וכתוב אותו בפורמט המתאים לשקף.
 
-הנחיית המשתמש:
-{user_prompt}
+מקורות המידע:
+---
+הנחיית המשתמש: {user_prompt}
 
 מסמך מקור:
 {document_text}
+---
 
-═══ הנחיות פורמט בלבד (אין לשאוב מכאן עובדות או תוכן!) ═══
-
-מטרת השקף:
-{slide_description}
-
-מבנה האובייקט (הנחיית פורמט בלבד — לא מקור מידע!):
-{object_description}
-
-═══════════════════════════════════════════════════════
+שקף: {slide_description}
+פורמט נדרש: {object_description}
 
 {language_instruction}
 
 {validation_feedback}
 
-כללי כתיבה קריטיים:
-1. מקור האמת היחיד הוא הנחיית המשתמש והמסמך. כל עובדה, פרט, או תוכן חייב להגיע משם.
-2. "מבנה האובייקט" מתאר את הפורמט והמבנה הרצוי בלבד — הוא לא מקור מידע!
-   - אם כתוב שם "בתאריך X בוצע משימה Y" — זו דוגמה לפורמט, לא תוכן לשימוש.
-   - אין להפוך את דוגמאות הפורמט לתוכן אמיתי.
-3. אם המסמך או הנחיית המשתמש מכילים מידע רלוונטי — חובה לחלץ אותו, לסכם, לארגן ולהתאים אותו למבנה הנדרש. זו המטרה העיקרית שלך.
-   - מותר ורצוי לנסח מחדש, לסכם, לשנות סדר, ולהתאים את המידע לפורמט השקף.
-   - זה לא נחשב המצאה — זו עבודתך.
-4. אם הנחיית המשתמש או המסמך לא מכילים מספיק מידע למלא את השדה — החזר בדיוק: "לא סופק מספיק מידע להצגת תוכן זה."
-5. אין להמציא עובדות, תאריכים, שמות, מיקומים, או פרטים שלא מופיעים במקורות המידע.
-6. אין ליצור תוכן גנרי או כללי שנשמע מקצועי אבל לא מבוסס על מידע אמיתי.
-7. יש לכתוב בעברית תקינה וברורה.
-8. אם נדרש פירוט ויש מספיק מידע — כתוב בבולטים קצרים.
+הנחיות:
+- חלץ מידע רלוונטי מהמקורות למעלה וארגן אותו לפי הפורמט הנדרש.
+- מותר לנסח מחדש, לסכם, ולארגן — זו המטרה שלך.
+- אם המקורות לא מכילים מידע רלוונטי לשקף הזה, החזר בדיוק: "לא סופק מספיק מידע להצגת תוכן זה."
+- אל תחזיר תשובה ריקה. תמיד החזר תוכן או את הודעת "לא סופק מספיק מידע".
+- כתוב בעברית תקינה וברורה.
 
-החזר רק את התוכן.
+החזר רק את התוכן:
 """
         )
 
@@ -227,6 +227,16 @@ class SlideAgent:
                 obj["validation_status"] = "skipped"
                 continue
 
+            # Skip generation if Structure Agent flagged no source content
+            if obj.get("has_source_content") is False:
+                obj["generated_content"] = ValidatorAgent.NO_INFO_MESSAGE
+                obj["validation_status"] = "no_source_content"
+                obj["validation_attempts"] = 0
+                obj["validation_reason"] = "סומן על ידי סוכן המבנה כחסר מידע מספיק"
+                obj["validation_feedback"] = ""
+                obj["validation_raw"] = ""
+                continue
+
             result = self._generate_with_validation(
                 slide_description=slide["slide_description"],
                 object_description=obj["object_description"],
@@ -237,6 +247,9 @@ class SlideAgent:
             obj["generated_content"] = result["content"]
             obj["validation_status"] = result["status"]
             obj["validation_attempts"] = result["attempts"]
+            obj["validation_reason"] = result.get("reason", "")
+            obj["validation_feedback"] = result.get("feedback", "")
+            obj["validation_raw"] = result.get("raw_response", "")
 
         slide["generation_status"] = "completed"
         return slide
@@ -248,12 +261,11 @@ class SlideAgent:
         user_prompt: str,
         document_text: str
     ) -> dict:
-        """
-        Generate content with validation loop.
-        Returns: {"content": str, "status": str, "attempts": int}
-        """
-        validation_feedback = ""  # no feedback on first attempt
-        total_attempts = 1 + self.max_retries  # 1 initial + retries
+        validation_feedback = ""
+        total_attempts = 1 + self.max_retries
+        last_reason = ""
+        last_feedback = ""
+        last_raw = ""
 
         for attempt in range(1, total_attempts + 1):
 
@@ -265,6 +277,20 @@ class SlideAgent:
                 validation_feedback=validation_feedback
             )
 
+            # Reject empty content immediately
+            if not content or not content.strip():
+                last_reason = "התוכן שנוצר ריק"
+                last_feedback = "יש ליצור תוכן בפועל על בסיס המקורות"
+                last_raw = "[EMPTY CONTENT - skipped validation]"
+                if attempt < total_attempts:
+                    validation_feedback = (
+                        "⚠️ ניסיון קודם נכשל — התוכן שהחזרת היה ריק.\n"
+                        "חובה להחזיר תוכן. חלץ מידע מהמקורות, או אם אין מידע החזר: "
+                        '"לא סופק מספיק מידע להצגת תוכן זה."'
+                    )
+                continue
+
+            # Validate content
             validation = self.validator.validate(
                 generated_content=content,
                 user_prompt=user_prompt,
@@ -273,29 +299,43 @@ class SlideAgent:
                 document_text=document_text
             )
 
+            last_reason = validation.get("reason", "")
+            last_feedback = validation.get("feedback", "")
+            last_raw = validation.get("raw_response", "")
+
             if validation["is_valid"]:
                 return {
                     "content": content,
                     "status": "validated",
-                    "attempts": attempt
+                    "attempts": attempt,
+                    "reason": last_reason or "תקין",
+                    "feedback": "",
+                    "raw_response": last_raw
                 }
 
+            # Retry with feedback
             if attempt < total_attempts:
+                reason_text = validation.get("reason", "לא צוינה סיבה")
+                feedback_text = validation.get("feedback", "נסה לשפר את התוכן")
                 validation_feedback = (
-                    f"⚠️ ניסיון קודם נפסל. סיבה: {validation['reason']}\n"
-                    f"הנחיה לשיפור: {validation['feedback']}\n"
-                    f"אנא תקן את התוכן בהתאם."
+                    f"⚠️ ניסיון קודם נפסל. סיבה: {reason_text}\n"
+                    f"הנחיה לשיפור: {feedback_text}\n"
+                    f"תקן את התוכן בהתאם."
                 )
 
+        # All attempts exhausted
         return {
             "content": ValidatorAgent.NO_INFO_MESSAGE,
             "status": "failed_validation",
-            "attempts": total_attempts
+            "attempts": total_attempts,
+            "reason": last_reason or "כל הניסיונות נכשלו",
+            "feedback": last_feedback or "לא התקבל משוב מהבודק",
+            "raw_response": last_raw
         }
 
     def _get_language_instruction(self):
         if self.language.lower() == "hebrew":
-            return "כל הפלט חייב להיות בעברית בלבד. אין להשתמש באנגלית."
+            return "כתוב בעברית בלבד."
         return "Generate output in the same language as the input."
 
     def _is_title_object(self, obj: dict) -> bool:
@@ -305,15 +345,8 @@ class SlideAgent:
 
     def _generate_title(self, object_name: str) -> str:
         name = object_name.strip()
-
-        replacements = [
-            "כותרת",
-            "תת",
-        ]
-
-        for word in replacements:
+        for word in ["כותרת", "תת"]:
             name = name.replace(word, "")
-
         return " ".join(name.split())
 
     def _generate_with_llm(
@@ -329,18 +362,20 @@ class SlideAgent:
             user_prompt=user_prompt,
             slide_description=slide_description,
             object_description=object_description,
-            document_text=document_text or "None",
+            document_text=document_text or "לא סופק",
             language_instruction=self._get_language_instruction(),
             validation_feedback=validation_feedback
         )
 
-        response = client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "user", "content": formatted_prompt}
-            ],
-            temperature=0.3,
-            max_tokens=500
-        )
-        
-        return response.choices[0].message.content
+        try:
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": formatted_prompt}],
+                temperature=0.3,
+                max_tokens=500
+            )
+            return response.choices[0].message.content or ""
+
+        except Exception as e:
+            print(f"[SlideAgent] LLM generation error: {e}")
+            return ""
