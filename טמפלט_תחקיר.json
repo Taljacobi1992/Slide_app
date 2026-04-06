@@ -1,0 +1,95 @@
+{
+  "preset_name": "תחקיר",
+  "slides": [
+    {
+      "slide_num": 1,
+      "slide_description": "שקף כותרת לתחקיר",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת התחקיר",
+          "object_type": "text",
+          "object_description": "כותרת המתארת את שם התחקיר"
+        },
+        {
+          "object_id": "Subtitle 2",
+          "object_name": "תת כותרת פרטים כלליים",
+          "object_type": "text",
+          "object_description": "תת כותרת המתארת פרטיים כלליים כמו: תאריך, שם הצוות, TBD"
+        }
+      ]
+    },
+    {
+      "slide_num": 2,
+      "slide_description": "שקף רקע האירוע",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת רקע",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"רקע\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן רקע האירוע",
+          "object_type": "text",
+          "object_description": "שדה המתאר בבולטים את רקע האירוע אותו רוצים לתחקר בצורה כללית בתתי כותרות עקריות כגון: \"בתאריך X בוצע משימה Y בה התרחש אירוע בטיחות Z בו מתמקד התחקיר, האירוע קרה בשדה/אזור XXX בשעה כאשר התוצאה הסופית הינה XXX\""
+        }
+      ]
+    },
+    {
+      "slide_num": 3,
+      "slide_description": "שקף תיאור האירוע",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת תיאור האירוע",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"תאור האירוע\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן רצף כרונולוגי",
+          "object_type": "text",
+          "object_description": "שדה המתאר בבולטים את הרצף הכרונולגי של האירוע, במידה וקיים תאור של זמנים הוא יציין כל שלב באירוע עם תיאור הזמן שלו"
+        }
+      ]
+    },
+    {
+      "slide_num": 4,
+      "slide_description": "שקף לקחים מרכזיים",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת לקחים מרכזיים",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"לקחים מרכזיים\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן לקחים מרכזיים",
+          "object_type": "text",
+          "object_description": "שדה המתאר בבולטים את הלקחים המרכזיים הנובעים מהתחקיר"
+        }
+      ]
+    },
+    {
+      "slide_num": 5,
+      "slide_description": "שקף המלצות וסיכום",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת המלצות וסיכום",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"המלצות להמשך וסיכום\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן המלצות וסיכום",
+          "object_type": "text",
+          "object_description": "שדה המתאר בבולטים את ההמלצות הנובעות מהתחקיר ואת הסיכום שלו"
+        }
+      ]
+    }
+  ]
+}

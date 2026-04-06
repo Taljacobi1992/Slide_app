@@ -1,0 +1,75 @@
+API endpoints:
+
+
+1. Structure Agent - Generate Outline (preview)
+
+צעד ראשון שאין טמפלט, גרדיו מקבל את הקלט של המשתמש ושולח בחזרה מבנה לבחינה ואישור.
+
+Input:
+user_prompt (string, required)
+document_text (string, optional)
+slide_count (integer or null, optional) — מספר שקופיות, null = auto
+
+Output:
+outline JSON with slides array (each slide has: slide_num, title, layout, topics)
+
+
+2. Structure Agent - Edit Outline
+
+המשתמש מעוניין לשנות את המבנה שקיבל לפני שמאשר אותו.
+
+Input:
+edit_instruction (string, required) - "הסר שקף"
+current_outline (JSON, required)
+
+Output:
+Updated outline JSON
+
+
+3. Slide Agent - Generate Presentation
+
+רץ רק לאחר אישור של המבנה, או ישירות אם סופק טמפלט וממלא אותו
+
+Input:
+skeleton (JSON, required) - או מטמפלט שסופק או מטמפלט שנוצר בשלב 1
+user_prompt (string, required)
+document_text (string, optional)
+
+Output:
+skeleton JSON with generated_content
+Each slide marked generation_status: "completed"
+
+
+4. Edit Agent - Deck-Level Edit
+
+המשתמש משנה את כל השקופיות דרך שיחה עם הסוכן
+
+Input:
+user_message (string, required)
+current_skeleton (JSON, required)
+user_prompt (string, required) - פרומפט מקורי
+document_text (string, optional) - טקסט מקורי
+
+Output:
+Updated skeleton JSON
+summary - מה שונה ואיזו גרסה נפתחה
+applied_count - כמות האובייקטים שהשתנו
+
+
+5. Edit Agent - Slide-Level Edit
+
+כמו סעיף 4 רק עבור שקופית ספציפית שנבחרת ע"י המשתמש
+
+Input:
+user_message (string, required)
+slide_num (string, required)
+current_skeleton (JSON, required)
+user_prompt (string, required)
+document_text (string, optional)
+
+Output:
+Same as deck-level edit
+
+
+Template-free flow: Generate outline → (Edit Outline) → Approve → Generate Content → (Edit Content)
+Template-based flow: Upload Template → Generate Content → (Edit Content)

@@ -1,0 +1,107 @@
+{
+  "preset_name": "דיון סטטוס",
+  "slides": [
+    {
+      "slide_num": 1,
+      "slide_description": "שקף כותרת לדיון סטטוס",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת הדיון",
+          "object_type": "text",
+          "object_description": "כותרת המתארת את שם הדיון"
+        }
+      ]
+    },
+    {
+      "slide_num": 2,
+      "slide_description": "שקף מטרת הדיון",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת מטרת הדיון",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"מטרת הדיון\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן מטרות הדיון",
+          "object_type": "text",
+          "object_description": "תיאור בבולטים את המטרות המרכזיות של הדיון כאשר אופי הדיון הינו עדכון בסטטוס הפרוייקט ולכן המטרות יאופיינו ב\"חיתוך מצב הפרוייקט/יישור קו על סטטוס משימות/המלצות/פערים מרכזיים\""
+        }
+      ]
+    },
+    {
+      "slide_num": 3,
+      "slide_description": "שקף עד כה מה בוצע",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת עד כה מה בוצע",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"עד כה מה בוצע\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן שלבים שבוצעו",
+          "object_type": "text",
+          "object_description": "תיאור בבולטים את השלבים שבוצעו עד כה בפרוייקט ומה השלב הנוכחי בו הפרוייקט נמצא ומתמקד"
+        }
+      ]
+    },
+    {
+      "slide_num": 4,
+      "slide_description": "שקף סטטוס משימות",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת סטטוס משימות",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"סטטוס משימות\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן סטטוס משימות",
+          "object_type": "text",
+          "object_description": "תיאור בבולטים את סטטוס המשימות המרכזיות למעקב עם פירוט של בוצע/לא בוצע/בתהליך בשילוב של תאריכי יעד ותחומי אחריותבמידה ויש במסמך/פרומפט רפרנסים של משימות הנוגעות לאנשי מקצוע מסויים הם ייכנסו כאן"
+        }
+      ]
+    },
+    {
+      "slide_num": 5,
+      "slide_description": "שקף פערים מרכזיים",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת פערים מרכזיים",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"פערים מרכזיים\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן פערים מרכזיים",
+          "object_type": "text",
+          "object_description": "תיאור בבולטים את הפעריים המרכזיים הדורשים את התייחסות"
+        }
+      ]
+    },
+    {
+      "slide_num": 6,
+      "slide_description": "שקף המלצות להמשך",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת המלצות להמשך",
+          "object_type": "text",
+          "object_description": "כותרת בשם \"המלצות להמשך\""
+        },
+        {
+          "object_id": "Rectangle 2",
+          "object_name": "תוכן המלצות להמשך",
+          "object_type": "text",
+          "object_description": "תיאור בבולטים את ההמלצות המרכזיות להמשך בפרוייקט – יכולות להיות כפתרון לפערים קיימים ויכולות להיות כנקודות חדשות הממליצות על תחומים שונים בפרוייקט"
+        }
+      ]
+    }
+  ]
+}

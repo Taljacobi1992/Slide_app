@@ -1,0 +1,101 @@
+{
+  "preset_name": "פיצטקה",
+  "slides": [
+    {
+      "slide_num": 1,
+      "slide_description": "שקף תדריך משימה עם חלקים לתכלית, משימה, סד\"כ, שיטה, תנאים, בטיחות, תאריך ושעה",
+      "slide_objects": [
+        {
+          "object_id": "Title 1",
+          "object_name": "כותרת משימה",
+          "object_type": "text",
+          "object_description": "כותרת – תאור שם הפ\"מ"
+        },
+        {
+          "object_id": "Rectangle 3",
+          "object_name": "כותרת תכלית",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"תכלית\""
+        },
+        {
+          "object_id": "Rectangle 4",
+          "object_name": "כותרת משימה",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"משימה\""
+        },
+        {
+          "object_id": "Rectangle 5",
+          "object_name": "כותרת סד\"כ",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"סד\"כ\""
+        },
+        {
+          "object_id": "Rectangle 6",
+          "object_name": "כותרת שיטה",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"שיטה\""
+        },
+        {
+          "object_id": "Rectangle 7",
+          "object_name": "כותרת תנאים",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"תנאים\""
+        },
+        {
+          "object_id": "Rectangle 8",
+          "object_name": "כותרת בטיחות",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"בטיחות\""
+        },
+        {
+          "object_id": "Rectangle 9",
+          "object_name": "תיאור המאמץ הכולל",
+          "object_type": "text",
+          "object_description": "תיאור מילולי של תכלית הפ\"מ והמאמץ הכולל/רחב יותר"
+        },
+        {
+          "object_id": "Rectangle 10",
+          "object_name": "אזור מפה",
+          "object_type": "image",
+          "object_description": "אזור במצגת השמור להדבקת מפה שמתארת את הפ\"מ"
+        },
+        {
+          "object_id": "Rectangle 11",
+          "object_name": "משימה ספציפית",
+          "object_type": "text",
+          "object_description": "מה עושים בפ\"מ/משימה הספיציפית של היום"
+        },
+        {
+          "object_id": "Rectangle 12",
+          "object_name": "תיאור כלים אוויריים",
+          "object_type": "text",
+          "object_description": "תאור הכלים האוויריים שמשתתפים במשימה – תאור לפי: \"סוג מטוס, כמות, ייעוד במשימה\""
+        },
+        {
+          "object_id": "Rectangle 13",
+          "object_name": "ציר זמן המשימה",
+          "object_type": "text",
+          "object_description": "תיאור כרונולוגי של שלבי המשימה ביחס ל\"ש\""
+        },
+        {
+          "object_id": "Rectangle 14",
+          "object_name": "תנאי המשימה",
+          "object_type": "text",
+          "object_description": "תיאור תנאים הקיימים כדי שהמשימה תתבצע/מגבלות המונעות מהמשימה להתבצע"
+        },
+        {
+          "object_id": "Rectangle 15",
+          "object_name": "הערות בטיחות",
+          "object_type": "text",
+          "object_description": "תיאור דגשים ונקודות הנוגעות לבטיחות"
+        },
+        {
+          "object_id": "Rectangle 16",
+          "object_name": "תאריך ושעה",
+          "object_type": "text",
+          "object_description": "תת כותרת בשם \"תאריך\"\"ש\" = XXX"
+        }
+      ]
+    }
+  ]
+}

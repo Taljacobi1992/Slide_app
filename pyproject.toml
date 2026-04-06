@@ -1,0 +1,18 @@
+[project]
+name = "slide-generation-tool"
+version = "0.1.0"
+description = "AI-powered presentation generation tool with Hebrew support"
+requires-python = ">=3.10"
+
+dependencies = [
+    "gradio>=4.0.0",
+    "langchain-core>=0.1.0",
+    "langchain-openai>=0.1.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
