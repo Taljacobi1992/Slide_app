@@ -14,5 +14,5 @@ class Settings(BaseSettings):
     settings: AppSettings
 
 
-with open(os.path.join(ROOT_DIR, "config/config.json")) as f:
+with open(os.path.join(ROOT_DIR, "config/config.json"), encoding="utf-8") as f:
     settings = Settings.model_validate_json(f.read())
