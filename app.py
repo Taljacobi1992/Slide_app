@@ -175,7 +175,7 @@ def build_app():
 
         with gr.Tab("✏️ עריכת מצגת"):
             gr.Markdown("### עריכה ברמת המצגת\nשוחח עם הסוכן לעריכות רחבות על כל המצגת.", elem_classes=["rtl-text"])
-            deck_chatbot = gr.Chatbot(label="צ'אט עריכת מצגת", height=350, type="messages", rtl=True)
+            deck_chatbot = gr.Chatbot(label="צ'אט עריכת מצגת", height=350, rtl=True)
             with gr.Row():
                 deck_chat_input = gr.Textbox(label="הנחיית עריכה", placeholder="כתוב כאן מה לשנות במצגת...", lines=2, rtl=True, scale=4)
                 deck_send_btn = gr.Button("שלח", variant="primary", scale=1)
@@ -198,7 +198,7 @@ def build_app():
             gr.Markdown("### עריכה ברמת השקף\nבחר שקף ושוחח עם הסוכן על שינויים בשקף הנבחר בלבד.", elem_classes=["rtl-text"])
             slide_selector = gr.Dropdown(label="בחר שקף", choices=[], interactive=True)
             slide_preview = gr.Markdown(value="בחר שקף כדי לראות את התוכן שלו", elem_classes=["rtl-text"])
-            slide_chatbot = gr.Chatbot(label="צ'אט עריכת שקף", height=300, type="messages", rtl=True)
+            slide_chatbot = gr.Chatbot(label="צ'אט עריכת שקף", height=300, rtl=True)
             with gr.Row():
                 slide_chat_input = gr.Textbox(label="הנחיית עריכה לשקף", placeholder="כתוב כאן מה לשנות בשקף הנבחר...", lines=2, rtl=True, scale=4)
                 slide_send_btn = gr.Button("שלח", variant="primary", scale=1)
