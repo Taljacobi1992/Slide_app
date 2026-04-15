@@ -1,4 +1,5 @@
-"model": {
+{
+  "model": {
     "name": "openai/gpt-oss-120b",
     "url": "https://ai-services.ai.idt.cts",
     "api_key_env": "AI_SERVICES_TOKEN",
