@@ -1,7 +1,7 @@
 [project]
 name = "slide-generation-tool"
 version = "0.1.0"
-description = "AI-powered presentation generation tool with Hebrew support"
+description = "presentation generation tool"
 requires-python = ">=3.10"
 
 dependencies = [
