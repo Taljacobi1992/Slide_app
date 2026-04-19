@@ -1,6 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 from utils.llm import call_llm
 from config import settings
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 #  Validator Agent
@@ -206,6 +207,19 @@ class SlideAgent:
             self._process_single_object(obj, slide["slide_description"], user_prompt, document_text)
         slide["generation_status"] = "completed"
         return slide
+    
+
+
+    def generate_all_slides(self, slides: list[dict], user_prompt: str, document_text: str, max_workers: int = 4) -> None:
+        """Generate content for all slides in parallel."""
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(self.generate_slide, slide=slide, user_prompt=user_prompt, document_text=document_text): slide
+            for slide in slides
+        }
+        for future in as_completed(futures):
+            future.result()
+            
 
     # ── Object-Level Processing ──
 
