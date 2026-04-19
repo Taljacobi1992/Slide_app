@@ -38,7 +38,7 @@ def handle_generate(file, user_prompt, document_text, slide_count_input):
         deck_state["pending_outline"] = None
 
         for slide in skeleton["slides"]:
-            agent.generate_slide(slide=slide, user_prompt=user_prompt, document_text=document_text or "")
+            agent.generate_all_slides(slides=skeleton["slides"], user_prompt=user_prompt, document_text=document_text or "")
 
         rev_manager.save_revision(skeleton=skeleton, action="יצירה", description="יצירת מצגת ראשונית עם תבנית")
         return ("✅ המצגת נוצרה בהצלחה", render_deck_preview(skeleton),
@@ -88,7 +88,7 @@ def approve_outline():
     deck_state["pending_outline"] = None
 
     for slide in skeleton["slides"]:
-        agent.generate_slide(slide=slide, user_prompt=deck_state.get("user_prompt", ""),
+        agent.generate_all_slides(slides=skeleton["slides"], user_prompt=deck_state.get("user_prompt", ""),
                              document_text=deck_state.get("document_text", ""))
 
     rev_manager.save_revision(skeleton=skeleton, action="יצירה", description="יצירת מצגת ממבנה מותאם")
