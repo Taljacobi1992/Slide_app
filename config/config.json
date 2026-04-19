@@ -34,3 +34,13 @@
     "no_info_message": "לא סופק מספיק מידע להצגת תוכן זה."
   }
 }
+
+
+"""
+  "model": {
+    "name": "openai/gpt-oss-120b",
+    "url": "https://router.huggingface.co",
+    "api_key_env": "HF_TOKEN",
+    "api_endpoint": "v1/chat/completions"
+
+"""
