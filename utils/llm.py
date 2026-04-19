@@ -3,24 +3,30 @@
 import os
 import json
 import httpx
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 
 from config import settings
 
+load_dotenv()
 
 #  Credentials
 
 API_KEY: str = os.getenv(settings.model.api_key_env, "")
-BASE_URL: str = f"{settings.model.url}/{settings.model.api_endpoint.rsplit('/', 1)[0]}"
+BASE_URL: str = f"{settings.model.url}/{settings.model.api_endpoint.split('/', 1)[0]}"
+HTTP_CLIENT = httpx.Client(verify=False)
+HTTP_ASYNC_CLIENT = httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(verify=False))
 
 
 #  Model Instances
 
 generation_model: ChatOpenAI = ChatOpenAI(
     model_name=settings.model.name,
-    openai_api_key=API_KEY,
-    openai_api_base=BASE_URL,
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    http_client=HTTP_CLIENT,
+    http_async_client=HTTP_ASYNC_CLIENT,
     temperature=settings.agents.generation.temperature,
     top_p=settings.agents.generation.top_p,
     max_tokens=settings.agents.generation.max_tokens,
@@ -28,8 +34,10 @@ generation_model: ChatOpenAI = ChatOpenAI(
 
 validation_model: ChatOpenAI = ChatOpenAI(
     model_name=settings.model.name,
-    openai_api_key=API_KEY,
-    openai_api_base=BASE_URL,
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    http_client=HTTP_CLIENT,
+    http_async_client=HTTP_ASYNC_CLIENT,
     temperature=settings.agents.validation.temperature,
     top_p=settings.agents.validation.top_p,
     max_tokens=settings.agents.validation.max_tokens,
@@ -37,8 +45,10 @@ validation_model: ChatOpenAI = ChatOpenAI(
 
 edit_model: ChatOpenAI = ChatOpenAI(
     model_name=settings.model.name,
-    openai_api_key=API_KEY,
-    openai_api_base=BASE_URL,
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    http_client=HTTP_CLIENT,
+    http_async_client=HTTP_ASYNC_CLIENT,
     temperature=settings.agents.edit.temperature,
     top_p=settings.agents.edit.top_p,
     max_tokens=settings.agents.edit.max_tokens,
@@ -46,8 +56,10 @@ edit_model: ChatOpenAI = ChatOpenAI(
 
 structure_model: ChatOpenAI = ChatOpenAI(
     model_name=settings.model.name,
-    openai_api_key=API_KEY,
-    openai_api_base=BASE_URL,
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    http_client=HTTP_CLIENT,
+    http_async_client=HTTP_ASYNC_CLIENT,
     temperature=settings.agents.structure.temperature,
     top_p=settings.agents.structure.top_p,
     max_tokens=settings.agents.structure.max_tokens,
