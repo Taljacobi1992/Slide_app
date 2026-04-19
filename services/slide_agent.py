@@ -213,12 +213,12 @@ class SlideAgent:
     def generate_all_slides(self, slides: list[dict], user_prompt: str, document_text: str, max_workers: int = 4) -> None:
         """Generate content for all slides in parallel."""
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(self.generate_slide, slide=slide, user_prompt=user_prompt, document_text=document_text): slide
-            for slide in slides
-        }
-        for future in as_completed(futures):
-            future.result()
+            futures = {
+                executor.submit(self.generate_slide, slide=slide, user_prompt=user_prompt, document_text=document_text): slide
+                for slide in slides
+            }
+            for future in as_completed(futures):
+                future.result()
             
 
     # ── Object-Level Processing ──
