@@ -204,6 +204,7 @@ def _execute_deck_edit(user_message: str, skeleton: dict) -> tuple[str, int, dic
     raw_response: str = call_llm(edit_prompt, role="edit")
     edit_data: dict = parse_llm_json(raw_response)
     applied_count: int = apply_edits_to_skeleton(edit_data)
+    _regenerate_pending_objects(skeleton)
     return edit_data.get("summary", ""), applied_count, edit_data
 
 
@@ -292,6 +293,7 @@ def _execute_slide_edit(
     raw_response: str = call_llm(edit_prompt, role="edit")
     edit_data: dict = parse_llm_json(raw_response)
     applied_count: int = apply_edits_to_skeleton(edit_data, scope_slide_num=slide_num)
+    _regenerate_pending_objects(deck_state["skeleton"])
     return edit_data.get("summary", ""), applied_count, edit_data
 
 
