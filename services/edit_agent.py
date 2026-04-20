@@ -175,6 +175,22 @@ def _build_no_changes_slide_message(summary: str, slide: dict, slide_num: str) -
     return f"⚠️ {summary}\n\nאובייקטים בשקף {slide_num}:\n" + "\n".join(obj_list)
 
 
+def _regenerate_pending_objects(skeleton: dict) -> None:
+    """Scan skeleton for pending_regeneration objects and regenerate them."""
+    agent = deck_state.get("agent")
+    if agent is None:
+        return
+    user_prompt = deck_state.get("user_prompt", "")
+    document_text = deck_state.get("document_text", "")
+    for slide in skeleton.get("slides", []):
+        has_pending = any(
+            obj.get("validation_status") == "pending_regeneration"
+            for obj in slide.get("slide_objects", [])
+        )
+        if has_pending:
+            agent.regenerate_pending_objects(slide, user_prompt, document_text)
+
+
 
 #  Deck-Level Chat Edit
 
