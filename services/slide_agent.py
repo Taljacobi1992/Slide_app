@@ -226,8 +226,8 @@ class SlideAgent:
         for obj in slide.get("slide_objects", []):
             if obj.get("validation_status") == "pending_regeneration":
                 self._process_single_object(
-                obj, slide["slide_description"], user_prompt, document_text
-            )
+                    obj, slide["slide_description"], user_prompt, document_text
+                )
 
     # ── Object-Level Processing ──
 
