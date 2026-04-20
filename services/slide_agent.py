@@ -219,7 +219,15 @@ class SlideAgent:
             }
             for future in as_completed(futures):
                 future.result()
-            
+
+    
+    def regenerate_pending_objects(self, slide: dict, user_prompt: str, document_text: str) -> None:
+    """Regenerate only objects marked as pending_regeneration in a slide."""
+    for obj in slide.get("slide_objects", []):
+        if obj.get("validation_status") == "pending_regeneration":
+            self._process_single_object(
+                obj, slide["slide_description"], user_prompt, document_text
+            )
 
     # ── Object-Level Processing ──
 
