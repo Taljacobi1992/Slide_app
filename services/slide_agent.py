@@ -13,7 +13,7 @@ class ValidatorAgent:
         self.validation_prompt: PromptTemplate = PromptTemplate(
             input_variables=[
                 "generated_content", "user_prompt", "slide_description",
-                "object_description", "document_text",
+                "object_description", "document_text", "no_info_message",
             ],
             template="""אתה בודק תוכן מצגות. \
 תפקידך למנוע הזיות ותוכן בדוי, תוך אישור תוכן לגיטימי.
@@ -39,12 +39,12 @@ class ValidatorAgent:
 השאלה המרכזית: "האם התוכן סותר את המקורות או מכיל עובדות שלא קיימות בהם?"
 
 אשר ✅ אם: התוכן מסכם/מנסח מחדש/מארגן מידע מהמקורות, או מסקנות סבירות הנגזרות מהמידע.
-דחה ❌ אם: עובדות ספציפיות שלא במקורות, תוכן ריק, תוכן גנרי לחלוטין, או "לא סופק מספיק מידע" כשיש מידע רלוונטי.
+דחה ❌ אם: תאריכים/שנים/שעות/מספרים/שמות שלא מופיעים במפורש במקורות, עובדות ספציפיות שלא במקורות, תוכן ריק, תוכן גנרי לחלוטין, או "{no_info_message}" כשיש מידע רלוונטי.
 
 החזר בדיוק בפורמט הזה (3 שורות):
 VALID: כן/לא
 REASON: סיבה קצרה
-FEEDBACK: הנחיה לשיפור (או "אין" אם תקין)
+FEEDBACK: אם נדחה — ציין במפורש אילו פרטים להסיר או לתקן (לדוגמה: "הסר את התאריך X, הסר את השם Y — אלו לא מופיעים במקורות"). אם אושר — "אין"
 """,
         )
 
@@ -67,6 +67,7 @@ FEEDBACK: הנחיה לשיפור (או "אין" אם תקין)
             slide_description=slide_description,
             object_description=object_description,
             document_text=document_text or "לא סופק",
+            no_info_message=settings.settings.no_info_message,
         )
 
         try:
@@ -169,6 +170,7 @@ class SlideAgent:
             input_variables=[
                 "user_prompt", "slide_description", "object_description",
                 "document_text", "language_instruction", "validation_feedback",
+                "no_info_message",
             ],
             template="""אתה כותב תוכן עבור שקף במצגת מקצועית.
 
@@ -192,7 +194,9 @@ class SlideAgent:
 הנחיות:
 - חלץ מידע רלוונטי מהמקורות למעלה וארגן אותו לפי הפורמט הנדרש.
 - מותר לנסח מחדש, לסכם, ולארגן — זו המטרה שלך.
-- אם המקורות לא מכילים מידע רלוונטי לשקף הזה, החזר בדיוק: "לא סופק מספיק מידע להצגת תוכן זה."
+- אם המקורות לא מכילים מידע רלוונטי לשקף הזה, החזר בדיוק: "{no_info_message}"
+- אין להמציא תאריכים, שעות, שנים, מספרים, שמות, או נתונים כמותיים שלא מופיעים במפורש במקורות.
+- אם אתה מוצא את עצמך כותב פרט ספציפי שלא קיים במקורות — עצור והחזר את הודעת "{no_info_message}"
 - אל תחזיר תשובה ריקה. תמיד החזר תוכן או את הודעת "לא סופק מספיק מידע".
 - כתוב בעברית תקינה וברורה.
 
@@ -398,6 +402,7 @@ class SlideAgent:
             document_text=document_text or "לא סופק",
             language_instruction=self._get_language_instruction(),
             validation_feedback=validation_feedback,
+            no_info_message=settings.settings.no_info_message,
         )
         return call_llm(formatted_prompt, role="generation")
 
