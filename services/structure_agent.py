@@ -23,10 +23,16 @@ def _build_count_instructions(slide_count: Optional[int]) -> tuple[str, str]:
     return count_instruction, count_rule
 
 
+def _truncate_document(document_text: str, max_chars: int = 12000) -> str:
+    """Truncate document text to avoid exceeding model context limits."""
+    if not document_text or len(document_text) <= max_chars:
+        return document_text
+    return document_text[:max_chars] + "\n\n[המסמך קוצר עקב אורך — תוכן נוסף לא נכלל]"
+
 def generate_outline(user_prompt: str, document_text: str, slide_count: Optional[int]) -> dict:
-    """Generate a proposed presentation outline from prompt and document text."""
     count_instruction, count_rule = _build_count_instructions(slide_count)
-    prompt: str = build_structure_prompt(user_prompt, document_text, count_instruction, count_rule)
+    truncated_text = _truncate_document(document_text)
+    prompt: str = build_structure_prompt(user_prompt, truncated_text, count_instruction, count_rule)
     raw_response: str = call_llm_raw(prompt)
     return parse_llm_json(raw_response)
 

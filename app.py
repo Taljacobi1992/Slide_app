@@ -37,8 +37,7 @@ def handle_generate(file, user_prompt, document_text, slide_count_input):
         deck_state["revision_manager"] = rev_manager
         deck_state["pending_outline"] = None
 
-        for slide in skeleton["slides"]:
-            agent.generate_slide(slide=slide, user_prompt=user_prompt, document_text=document_text or "")
+        agent.generate_all_slides(slides=skeleton["slides"], user_prompt=user_prompt, document_text=document_text or "")
 
         rev_manager.save_revision(skeleton=skeleton, action="יצירה", description="יצירת מצגת ראשונית עם תבנית")
         return ("✅ המצגת נוצרה בהצלחה", render_deck_preview(skeleton),
@@ -87,8 +86,7 @@ def approve_outline():
     deck_state["revision_manager"] = rev_manager
     deck_state["pending_outline"] = None
 
-    for slide in skeleton["slides"]:
-        agent.generate_slide(slide=slide, user_prompt=deck_state.get("user_prompt", ""),
+    agent.generate_all_slides(slides=skeleton["slides"], user_prompt=deck_state.get("user_prompt", ""),
                              document_text=deck_state.get("document_text", ""))
 
     rev_manager.save_revision(skeleton=skeleton, action="יצירה", description="יצירת מצגת ממבנה מותאם")
@@ -175,7 +173,7 @@ def build_app():
 
         with gr.Tab("✏️ עריכת מצגת"):
             gr.Markdown("### עריכה ברמת המצגת\nשוחח עם הסוכן לעריכות רחבות על כל המצגת.", elem_classes=["rtl-text"])
-            deck_chatbot = gr.Chatbot(label="צ'אט עריכת מצגת", height=350, type="messages", rtl=True)
+            deck_chatbot = gr.Chatbot(label="צ'אט עריכת מצגת", height=350, rtl=True)
             with gr.Row():
                 deck_chat_input = gr.Textbox(label="הנחיית עריכה", placeholder="כתוב כאן מה לשנות במצגת...", lines=2, rtl=True, scale=4)
                 deck_send_btn = gr.Button("שלח", variant="primary", scale=1)
@@ -198,7 +196,7 @@ def build_app():
             gr.Markdown("### עריכה ברמת השקף\nבחר שקף ושוחח עם הסוכן על שינויים בשקף הנבחר בלבד.", elem_classes=["rtl-text"])
             slide_selector = gr.Dropdown(label="בחר שקף", choices=[], interactive=True)
             slide_preview = gr.Markdown(value="בחר שקף כדי לראות את התוכן שלו", elem_classes=["rtl-text"])
-            slide_chatbot = gr.Chatbot(label="צ'אט עריכת שקף", height=300, type="messages", rtl=True)
+            slide_chatbot = gr.Chatbot(label="צ'אט עריכת שקף", height=300, rtl=True)
             with gr.Row():
                 slide_chat_input = gr.Textbox(label="הנחיית עריכה לשקף", placeholder="כתוב כאן מה לשנות בשקף הנבחר...", lines=2, rtl=True, scale=4)
                 slide_send_btn = gr.Button("שלח", variant="primary", scale=1)

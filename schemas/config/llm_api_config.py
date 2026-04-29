@@ -6,6 +6,7 @@ class ModelConfig(BaseModel):
     name: str
     url: str
     api_key_env: str
+    api_endpoint: str
 
 
 class AgentParams(BaseModel):

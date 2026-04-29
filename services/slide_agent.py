@@ -1,6 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 from utils.llm import call_llm
 from config import settings
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 #  Validator Agent
@@ -12,7 +13,7 @@ class ValidatorAgent:
         self.validation_prompt: PromptTemplate = PromptTemplate(
             input_variables=[
                 "generated_content", "user_prompt", "slide_description",
-                "object_description", "document_text",
+                "object_description", "document_text", "no_info_message",
             ],
             template="""אתה בודק תוכן מצגות. \
 תפקידך למנוע הזיות ותוכן בדוי, תוך אישור תוכן לגיטימי.
@@ -38,12 +39,12 @@ class ValidatorAgent:
 השאלה המרכזית: "האם התוכן סותר את המקורות או מכיל עובדות שלא קיימות בהם?"
 
 אשר ✅ אם: התוכן מסכם/מנסח מחדש/מארגן מידע מהמקורות, או מסקנות סבירות הנגזרות מהמידע.
-דחה ❌ אם: עובדות ספציפיות שלא במקורות, תוכן ריק, תוכן גנרי לחלוטין, או "לא סופק מספיק מידע" כשיש מידע רלוונטי.
+דחה ❌ אם: תאריכים/שנים/שעות/מספרים/שמות שלא מופיעים במפורש במקורות, עובדות ספציפיות שלא במקורות, תוכן ריק, תוכן גנרי לחלוטין, או "{no_info_message}" כשיש מידע רלוונטי.
 
 החזר בדיוק בפורמט הזה (3 שורות):
 VALID: כן/לא
 REASON: סיבה קצרה
-FEEDBACK: הנחיה לשיפור (או "אין" אם תקין)
+FEEDBACK: אם נדחה — ציין במפורש אילו פרטים להסיר או לתקן (לדוגמה: "הסר את התאריך X, הסר את השם Y — אלו לא מופיעים במקורות"). אם אושר — "אין"
 """,
         )
 
@@ -66,6 +67,7 @@ FEEDBACK: הנחיה לשיפור (או "אין" אם תקין)
             slide_description=slide_description,
             object_description=object_description,
             document_text=document_text or "לא סופק",
+            no_info_message=settings.settings.no_info_message,
         )
 
         try:
@@ -168,6 +170,7 @@ class SlideAgent:
             input_variables=[
                 "user_prompt", "slide_description", "object_description",
                 "document_text", "language_instruction", "validation_feedback",
+                "no_info_message",
             ],
             template="""אתה כותב תוכן עבור שקף במצגת מקצועית.
 
@@ -191,8 +194,10 @@ class SlideAgent:
 הנחיות:
 - חלץ מידע רלוונטי מהמקורות למעלה וארגן אותו לפי הפורמט הנדרש.
 - מותר לנסח מחדש, לסכם, ולארגן — זו המטרה שלך.
-- אם המקורות לא מכילים מידע רלוונטי לשקף הזה, החזר בדיוק: "לא סופק מספיק מידע להצגת תוכן זה."
-- אל תחזיר תשובה ריקה. תמיד החזר תוכן או את הודעת "לא סופק מספיק מידע".
+- אם המקורות לא מכילים מידע רלוונטי לשקף הזה, החזר בדיוק: "{no_info_message}"
+- אין להמציא תאריכים, שעות, שנים, מספרים, שמות, או נתונים כמותיים שלא מופיעים במפורש במקורות.
+- אם אתה מוצא את עצמך כותב פרט ספציפי שלא קיים במקורות — עצור והחזר את הודעת "{no_info_message}"
+- אל תחזיר תשובה ריקה. תמיד החזר תוכן או את הודעת "{no_info_message}"
 - כתוב בעברית תקינה וברורה.
 
 החזר רק את התוכן:
@@ -206,6 +211,27 @@ class SlideAgent:
             self._process_single_object(obj, slide["slide_description"], user_prompt, document_text)
         slide["generation_status"] = "completed"
         return slide
+    
+
+
+    def generate_all_slides(self, slides: list[dict], user_prompt: str, document_text: str, max_workers: int = 4) -> None:
+        """Generate content for all slides in parallel."""
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(self.generate_slide, slide=slide, user_prompt=user_prompt, document_text=document_text): slide
+                for slide in slides
+            }
+            for future in as_completed(futures):
+                future.result()
+
+    
+    def regenerate_pending_objects(self, slide: dict, user_prompt: str, document_text: str) -> None:
+        """Regenerate only objects marked as pending_regeneration in a slide."""
+        for obj in slide.get("slide_objects", []):
+            if obj.get("validation_status") == "pending_regeneration":
+                self._process_single_object(
+                    obj, slide["slide_description"], user_prompt, document_text
+                )
 
     # ── Object-Level Processing ──
 
@@ -320,8 +346,8 @@ class SlideAgent:
         return (
             "⚠️ ניסיון קודם נכשל — התוכן שהחזרת היה ריק.\n"
             "חובה להחזיר תוכן. "
-            'חלץ מידע מהמקורות, או אם אין מידע החזר: '
-            '"לא סופק מספיק מידע להצגת תוכן זה."'
+            f'חלץ מידע מהמקורות, או אם אין מידע החזר: '
+            f'"{settings.settings.no_info_message}"'
         )
 
     @staticmethod
@@ -376,6 +402,7 @@ class SlideAgent:
             document_text=document_text or "לא סופק",
             language_instruction=self._get_language_instruction(),
             validation_feedback=validation_feedback,
+            no_info_message=settings.settings.no_info_message,
         )
         return call_llm(formatted_prompt, role="generation")
 
