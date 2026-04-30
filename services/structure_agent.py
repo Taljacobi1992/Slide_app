@@ -114,25 +114,30 @@ def _build_text_objects(slide_num: int, title: str, topics: list, has_content: b
 
 
 def _build_two_columns_objects(title: str, topics: dict, has_content: bool) -> list[dict]:
-    """Build content objects for a title_two_columns layout."""
     objects: list[dict] = []
     if not isinstance(topics, dict):
         return objects
 
-    for side, obj_id in [("right", "Content Right"), ("left", "Content Left")]:
-        side_data = topics.get(side, {})
-        label: str = side_data.get("label", side)
-        side_topics: list = side_data.get("topics", [])
-        topics_str: str = ", ".join(side_topics) if side_topics else ""
+    right_data = topics.get("right", {})
+    left_data = topics.get("left", {})
+    right_label: str = right_data.get("label", "ימין")
+    left_label: str = left_data.get("label", "שמאל")
+    right_topics_str: str = ", ".join(right_data.get("topics", []))
+    left_topics_str: str = ", ".join(left_data.get("topics", []))
 
-        side_label = "ימנית" if side == "right" else "שמאלית"
+    for side, obj_id, side_label, this_label, this_topics, other_label, other_topics in [
+        ("right", "Content Right", "ימנית", right_label, right_topics_str, left_label, left_topics_str),
+        ("left",  "Content Left",  "שמאלית", left_label, left_topics_str, right_label, right_topics_str),
+    ]:
         objects.append({
             "object_id": obj_id,
             "object_name": f"תוכן עמודה {side_label} — {title}",
             "object_type": "text",
             "object_description": (
-                f"שדה תוכן בבולטים — עמודה {side_label} ({label}). "
-                f"הנושא: {title}. תחומים: {topics_str}. "
+                f"שדה תוכן בבולטים עבור עמודה {side_label} בלבד — '{this_label}'. "
+                f"כתוב אך ורק על: {this_topics}. "
+                f"העמודה השנייה ('{other_label}') מכסה את: {other_topics} — אל תחזור על נושאים אלו. "
+                f"התוכן של שתי העמודות חייב להיות שונה ומשלים זה את זה. "
                 f"יש לחלץ מהמקורות בלבד."
             ),
             "has_source_content": has_content,
