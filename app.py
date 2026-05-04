@@ -5,7 +5,7 @@ from services.slide_agent import SlideAgent
 from services.structure_agent import generate_outline, edit_outline, outline_to_skeleton
 from services.edit_agent import (
     deck_chat_edit, slide_chat_edit, on_slide_selected,
-    restore_revision, export_json
+    restore_revision, export_json, add_slide,
 )
 from utils.state import deck_state, get_slide_choices, detect_slide_count
 from utils.revision_manager import RevisionManager
