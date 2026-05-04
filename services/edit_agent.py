@@ -6,7 +6,7 @@ from typing import Optional
 
 import gradio as gr
 
-from utils.state import deck_state, parse_slide_num_from_selection, get_slide_by_num
+from utils.state import deck_state, parse_slide_num_from_selection, get_slide_by_num, get_slide_choices
 from utils.llm import call_llm, parse_llm_json
 from ui.renderers import render_deck_preview, format_slide_preview
 from prompts import build_deck_edit_prompt, build_slide_edit_prompt
