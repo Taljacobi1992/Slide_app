@@ -1,3 +1,5 @@
+from typing import Optional
+
 """All prompt templates for structure, outline editing, and deck/slide editing."""
 
 
