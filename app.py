@@ -202,10 +202,47 @@ def build_app():
                 slide_send_btn = gr.Button("שלח", variant="primary", scale=1)
             slide_revision_dropdown = gr.Dropdown(label="📜 היסטוריית גרסאות", choices=[], interactive=False)
 
+
+        with gr.Tab("➕ הוספת שקף"):
+            gr.Markdown("### הוסף שקף חדש\nתאר את השקף הרצוי ובחר את מיקומו במצגת.", elem_classes=["rtl-text"])
+            with gr.Row():
+                with gr.Column(scale=2):
+                    new_slide_instruction = gr.Textbox(
+                        label="תאר את השקף החדש",
+                        placeholder='לדוגמה: "שקף המסכם את מסקנות הדוח עם המלצות לשלבים הבאים"',
+                        lines=3, rtl=True,
+                    )
+                with gr.Column(scale=1):
+                    new_slide_position = gr.Dropdown(
+                        label="מיקום — לאחר/לפני איזה שקף?",
+                        choices=[], interactive=True,
+                    )
+                    new_slide_placement = gr.Radio(
+                        choices=["לפני", "אחרי"],
+                        value="אחרי",
+                        label="הוסף",
+                    )
+                    new_slide_layout = gr.Dropdown(
+                        label="Layout (אופציונלי)",
+                        choices=["אוטומטי", "title_bullets", "title_text",
+                                 "title_two_columns", "title_key_statement",
+                                 "section_header", "title_only"],
+                        value="אוטומטי",
+                        interactive=True,
+                    )
+            add_slide_btn = gr.Button("➕ צור והוסף שקף", variant="primary", size="lg")
+            add_slide_status = gr.Textbox(label="סטטוס", interactive=False, rtl=True)
+            gr.Markdown("### 👁️ תצוגה מקדימה", elem_classes=["rtl-text"])
+            add_slide_preview = gr.HTML(value='<div class="preview-empty">התצוגה תתעדכן לאחר הוספת שקף</div>')
+            with gr.Accordion("📄 JSON מעודכן", open=False):
+                add_slide_json = gr.Code(label="JSON", language="json", lines=15)
+
+        
+
         # ── Event Bindings ──
-        generate_btn.click(fn=handle_generate, inputs=[template_file, user_prompt_input, document_text_input, slide_count_input], outputs=[generation_status, generation_preview, generation_json, outline_section, outline_preview]).then(fn=lambda: gr.update(choices=get_slide_choices()), outputs=[slide_selector])
+        generate_btn.click(fn=handle_generate, inputs=[template_file, user_prompt_input, document_text_input, slide_count_input], outputs=[generation_status, generation_preview, generation_json, outline_section, outline_preview]).then(fn=lambda: gr.update(choices=get_slide_choices()), outputs=[slide_selector], .then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())),outputs=[slide_selector, new_slide_position],))
         outline_edit_btn.click(fn=edit_outline, inputs=[outline_edit_input], outputs=[outline_edit_status, outline_preview]).then(fn=lambda: "", outputs=[outline_edit_input])
-        approve_btn.click(fn=approve_outline, inputs=[], outputs=[generation_status, generation_preview, generation_json, outline_section, outline_preview]).then(fn=lambda: gr.update(choices=get_slide_choices()), outputs=[slide_selector])
+        approve_btn.click(fn=approve_outline, inputs=[], outputs=[generation_status, generation_preview, generation_json, outline_section, outline_preview]).then(fn=lambda: gr.update(choices=get_slide_choices()), outputs=[slide_selector], .then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())),outputs=[slide_selector, new_slide_position],))
 
         deck_send_btn.click(fn=deck_chat_edit, inputs=[deck_chat_input, deck_chatbot], outputs=[deck_chatbot, deck_edit_preview, deck_edit_json, revision_dropdown]).then(fn=lambda: ("", gr.update(choices=get_slide_choices())), outputs=[deck_chat_input, slide_selector]).then(fn=lambda: gr.update(choices=deck_state["revision_manager"].get_revision_choices()), outputs=[slide_revision_dropdown])
         deck_chat_input.submit(fn=deck_chat_edit, inputs=[deck_chat_input, deck_chatbot], outputs=[deck_chatbot, deck_edit_preview, deck_edit_json, revision_dropdown]).then(fn=lambda: ("", gr.update(choices=get_slide_choices())), outputs=[deck_chat_input, slide_selector]).then(fn=lambda: gr.update(choices=deck_state["revision_manager"].get_revision_choices()), outputs=[slide_revision_dropdown])
@@ -216,6 +253,8 @@ def build_app():
         slide_selector.change(fn=on_slide_selected, inputs=[slide_selector], outputs=[slide_preview])
         slide_send_btn.click(fn=slide_chat_edit, inputs=[slide_chat_input, slide_selector, slide_chatbot], outputs=[slide_chatbot, slide_preview, slide_revision_dropdown]).then(fn=lambda: "", outputs=[slide_chat_input]).then(fn=lambda: gr.update(choices=deck_state["revision_manager"].get_revision_choices()), outputs=[revision_dropdown])
         slide_chat_input.submit(fn=slide_chat_edit, inputs=[slide_chat_input, slide_selector, slide_chatbot], outputs=[slide_chatbot, slide_preview, slide_revision_dropdown]).then(fn=lambda: "", outputs=[slide_chat_input]).then(fn=lambda: gr.update(choices=deck_state["revision_manager"].get_revision_choices()), outputs=[revision_dropdown])
+
+        add_slide_btn.click(fn=add_slide,inputs=[new_slide_instruction, new_slide_position, new_slide_placement, new_slide_layout],outputs=[add_slide_status, add_slide_preview, add_slide_json, new_slide_position],).then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())),outputs=[slide_selector, new_slide_position],)
 
     return app
 
