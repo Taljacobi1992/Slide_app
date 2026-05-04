@@ -282,3 +282,64 @@ def build_slide_edit_prompt(
   "summary": "לא הצלחתי לזהות את האובייקט. האובייקטים הקיימים בשקף הם: {obj_list_str}"
 }}
 """
+
+
+
+def build_new_slide_prompt(
+    user_instruction: str,
+    user_prompt: str,
+    document_text: str,
+    adjacent_slides_json: str,
+    forced_layout: Optional[str] = None,
+) -> str:
+    layout_instruction = (
+        f'השתמש ב-layout: "{forced_layout}" בלבד.'
+        if forced_layout
+        else "בחר את ה-layout המתאים ביותר לתוכן המבוקש."
+    )
+    return f"""אתה מתכנן שקף חדש למצגת קיימת.
+
+═══ מקורות מידע ═══
+
+הנחיית המשתמש המקורית:
+{user_prompt}
+
+מסמך מקור:
+{document_text or "לא סופק"}
+
+═══ הקשר השקפים הסמוכים ═══
+
+{adjacent_slides_json}
+
+═══════════════════
+
+בקשת המשתמש לשקף החדש:
+{user_instruction}
+
+{layout_instruction}
+
+סוגי Layout זמינים:
+- "title_only" — כותרת בלבד
+- "title_bullets" — כותרת + רשימת נקודות
+- "title_text" — כותרת + פסקת טקסט רציפה
+- "title_two_columns" — כותרת + שתי עמודות
+- "title_key_statement" — כותרת + משפט מפתח
+- "section_header" — כותרת מפרידה
+
+כללים:
+1. הצע שקף אחד בלבד.
+2. הכותרת תהיה קצרה וברורה.
+3. הנושאים (topics) הם תיאורי נושא בלבד — לא תוכן סופי.
+4. סמן has_content: true רק אם המקורות מכילים מידע ספציפי וקונקרטי לשקף זה.
+5. התאם את תוכן השקף להקשר השקפים הסמוכים — אל תחזור על תוכן קיים.
+6. הכל בעברית.
+
+החזר JSON בלבד:
+
+{{
+  "title": "כותרת השקף",
+  "layout": "title_bullets",
+  "topics": ["נושא ראשון", "נושא שני"],
+  "has_content": true
+}}
+"""
