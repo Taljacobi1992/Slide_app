@@ -1,6 +1,6 @@
-from typing import Optional
-
 """All prompt templates for structure, outline editing, and deck/slide editing."""
+
+from typing import Optional
 
 
 def build_structure_prompt(
