@@ -363,3 +363,127 @@ def export_json() -> Optional[str]:
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(deck_state["skeleton"], f, indent=2, ensure_ascii=False)
     return output_path
+
+
+
+
+# ── New Slide Addition ──
+
+def _renumber_slides(skeleton: dict) -> None:
+    """Renumber all slides sequentially after an insertion."""
+    for i, slide in enumerate(skeleton["slides"], start=1):
+        slide["slide_num"] = i
+        for obj in slide.get("slide_objects", []):
+            pass  # object_ids are layout-based, not position-based — no change needed
+
+
+def _get_adjacent_slides_json(skeleton: dict, insert_index: int) -> str:
+    """Return JSON of the slides immediately before and after the insertion point."""
+    slides = skeleton["slides"]
+    adjacent = []
+    if insert_index > 0:
+        adjacent.append(slides[insert_index - 1])
+    if insert_index < len(slides):
+        adjacent.append(slides[insert_index])
+    return json.dumps(adjacent, indent=2, ensure_ascii=False)
+
+
+def add_slide(
+    instruction: str,
+    position_selection: str,
+    before_or_after: str,
+    layout_choice: str,
+) -> tuple:
+    """Add a new slide to the deck based on natural language instruction."""
+    if deck_state["skeleton"] is None:
+        return ("❌ יש ליצור מצגת קודם", 
+                '<div class="preview-empty">אין מצגת</div>',
+                "{}", gr.update(choices=[]))
+
+    if not instruction or not instruction.strip():
+        return ("❌ יש להזין תיאור לשקף החדש",
+                render_deck_preview(),
+                json.dumps(deck_state["skeleton"], indent=2, ensure_ascii=False),
+                gr.update(choices=[]))
+
+    skeleton = deck_state["skeleton"]
+    rev_manager = deck_state["revision_manager"]
+
+    # Determine insertion index
+    slide_num = parse_slide_num_from_selection(position_selection) if position_selection else None
+    if slide_num is None:
+        insert_index = len(skeleton["slides"])  # append at end
+    else:
+        base_index = next(
+            (i for i, s in enumerate(skeleton["slides"])
+             if str(s.get("slide_num", "")) == slide_num), 
+            len(skeleton["slides"]) - 1
+        )
+        insert_index = base_index if before_or_after == "לפני" else base_index + 1
+
+    # Build context for LLM
+    adjacent_json = _get_adjacent_slides_json(skeleton, insert_index)
+    forced_layout = layout_choice if layout_choice and layout_choice != "אוטומטי" else None
+
+    try:
+        # Ask LLM to plan the new slide
+        from prompts import build_new_slide_prompt
+        from services.structure_agent import _build_base_slide_entry, _build_content_objects_for_layout
+
+        prompt = build_new_slide_prompt(
+            user_instruction=instruction,
+            user_prompt=deck_state.get("user_prompt", ""),
+            document_text=deck_state.get("document_text", ""),
+            adjacent_slides_json=adjacent_json,
+            forced_layout=forced_layout,
+        )
+        raw_response = call_llm(prompt, role="structure")
+        slide_plan = parse_llm_json(raw_response)
+
+        # Build the new slide dict (reuse structure_agent helpers)
+        title = slide_plan.get("title", "שקף חדש")
+        layout = slide_plan.get("layout", "title_bullets")
+        topics = slide_plan.get("topics", [])
+        has_content = slide_plan.get("has_content", True)
+
+        new_slide = _build_base_slide_entry(
+            slide_num=insert_index + 1,  # temporary, will be renumbered
+            title=title,
+            layout=layout,
+        )
+        content_objects = _build_content_objects_for_layout(
+            layout, insert_index + 1, title, topics, has_content
+        )
+        new_slide["slide_objects"].extend(content_objects)
+
+        # Insert and renumber
+        skeleton["slides"].insert(insert_index, new_slide)
+        _renumber_slides(skeleton)
+
+        # Generate content via slide agent
+        agent = deck_state.get("agent")
+        if agent:
+            agent.generate_slide(
+                slide=new_slide,
+                user_prompt=deck_state.get("user_prompt", ""),
+                document_text=deck_state.get("document_text", ""),
+            )
+
+        rev_manager.save_revision(
+            skeleton=skeleton,
+            action="הוספת שקף",
+            description=f"שקף חדש: {title}",
+        )
+
+        return (
+            f"✅ שקף '{title}' נוסף בהצלחה — גרסה {rev_manager.get_latest_id()}",
+            render_deck_preview(skeleton),
+            json.dumps(skeleton, indent=2, ensure_ascii=False),
+            gr.update(choices=get_slide_choices()),
+        )
+
+    except (json.JSONDecodeError, KeyError) as e:
+        return (f"❌ שגיאה ביצירת שקף: {str(e)}",
+                render_deck_preview(skeleton),
+                json.dumps(skeleton, indent=2, ensure_ascii=False),
+                gr.update(choices=[]))
