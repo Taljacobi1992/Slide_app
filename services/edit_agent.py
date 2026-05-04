@@ -8,9 +8,12 @@ import gradio as gr
 
 from utils.state import deck_state, parse_slide_num_from_selection, get_slide_by_num, get_slide_choices
 from utils.llm import call_llm, parse_llm_json
+from utils.slide_builder import build_base_slide_entry, build_content_objects_for_layout
 from ui.renderers import render_deck_preview, format_slide_preview
 from prompts import build_deck_edit_prompt, build_slide_edit_prompt
 from schemas.layouts import LAYOUT_OBJECT_TEMPLATES
+
+
 
 
 
@@ -428,7 +431,6 @@ def add_slide(
     try:
         # Ask LLM to plan the new slide
         from prompts import build_new_slide_prompt
-        from services.structure_agent import _build_base_slide_entry, _build_content_objects_for_layout
 
         prompt = build_new_slide_prompt(
             user_instruction=instruction,
@@ -446,12 +448,12 @@ def add_slide(
         topics = slide_plan.get("topics", [])
         has_content = slide_plan.get("has_content", True)
 
-        new_slide = _build_base_slide_entry(
-            slide_num=insert_index + 1,  # temporary, will be renumbered
+        new_slide = build_base_slide_entry(
+            slide_num=insert_index + 1,
             title=title,
             layout=layout,
         )
-        content_objects = _build_content_objects_for_layout(
+        content_objects = build_content_objects_for_layout(
             layout, insert_index + 1, title, topics, has_content
         )
         new_slide["slide_objects"].extend(content_objects)
