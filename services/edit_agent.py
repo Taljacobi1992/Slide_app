@@ -481,7 +481,7 @@ def add_slide(
             f"✅ שקף '{title}' נוסף בהצלחה — גרסה {rev_manager.get_latest_id()}",
             render_deck_preview(skeleton),
             json.dumps(skeleton, indent=2, ensure_ascii=False),
-            gr.update(choices=get_slide_choices()),
+            gr.update(choices=get_slide_choices(), value=None),
         )
 
     except (json.JSONDecodeError, KeyError) as e:
