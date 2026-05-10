@@ -5,6 +5,7 @@ AVAILABLE_LAYOUTS: dict[str, str] = {
     "title_two_columns": "כותרת + שתי עמודות",
     "title_key_statement": "כותרת + משפט מפתח",
     "section_header": "כותרת מפרידה",
+    "title_infographic": "כותרת + אינפוגרפיקה",
 }
 
 LAYOUT_ICONS: dict[str, str] = {
@@ -14,6 +15,7 @@ LAYOUT_ICONS: dict[str, str] = {
     "title_two_columns": "⚖️",
     "title_key_statement": "💡",
     "section_header": "📌",
+    "title_infographic": "📊",
 }
 
 STATUS_ICONS: dict[str, str] = {
@@ -46,4 +48,8 @@ LAYOUT_OBJECT_TEMPLATES: dict[str, list[dict]] = {
         {"object_id": "Key Statement", "object_type": "text",
          "desc_template": "משפט מפתח אחד בלבד — קצר, חזק ומשמעותי. הנושא: {title}. יש לחלץ מהמקורות בלבד."}
     ],
+    "title_infographic": [
+    {"object_id": "Infographic 1", "object_type": "infographic",
+     "desc_template": "אינפוגרפיקה בפורמט Mermaid — הנושא: {title}. יש לחלץ מהמקורות בלבד."}
+],
 }

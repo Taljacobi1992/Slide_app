@@ -72,8 +72,8 @@ def outline_to_skeleton(outline: dict) -> dict:
         topics = slide.get("topics", [])
         has_content: bool = slide.get("has_content", True)
 
-        entry: dict = _build_base_slide_entry(slide_num, title, layout)
-        content_objects: list[dict] = _build_content_objects_for_layout(
+        entry: dict = build_base_slide_entry(slide_num, title, layout)
+        content_objects: list[dict] = build_content_objects_for_layout(
             layout, slide_num, title, topics, has_content
         )
         entry["slide_objects"].extend(content_objects)

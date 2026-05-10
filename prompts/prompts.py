@@ -1,4 +1,4 @@
-"""All prompt templates for structure, outline editing, and deck/slide editing."""
+"""All prompt templates for structure, outline editing, deck/slide editing, and infographics."""
 
 from typing import Optional
 
@@ -21,13 +21,22 @@ def build_structure_prompt(
 
 {count_instruction}
 
-סוגי שקפים זמינים (layout):
-- "title_only" — שקף כותרת בלבד, ללא תוכן. לשימוש בשקף פתיחה בלבד.
-- "title_bullets" — כותרת + רשימת נקודות. לשימוש בתוכן כללי, פירוט, רשימות.
-- "title_text" — כותרת + פסקת טקסט רציפה. לשימוש בהקשר, רקע, תיאור נרטיבי.
-- "title_two_columns" — כותרת + שתי עמודות (שמאל וימין). לשימוש בהשוואות, לפני/אחרי, יתרונות/חסרונות.
-- "title_key_statement" — כותרת + משפט מפתח אחד גדול. לשימוש בתובנה מרכזית, מספר מרכזי, ציטוט חשוב.
-- "section_header" — כותרת מפרידה בין חלקים. לשימוש בין חלקים שונים של המצגת.
+סוגי שקפים זמינים (layout) — בחר בקפידה לפי סוג התוכן:
+
+- "title_only" — שקף פתיחה בלבד. משמש אך ורק כשקף הראשון במצגת. אין להשתמש בו בשום מקום אחר.
+
+- "title_bullets" — כותרת + רשימת נקודות. משמש כאשר התוכן הוא קבוצה של פריטים קשורים: ממצאים, שלבים, המלצות, תכונות, לקחים. כל נקודה היא יחידת מידע עצמאית וקצרה. אין להשתמש כאשר התוכן דורש הסבר רציף או נרטיב.
+
+- "title_text" — כותרת + פסקת טקסט רציפה. משמש כאשר התוכן דורש הקשר, רקע, סיפור כרונולוגי, או הסבר שזורם כפסקה אחת. אין להשתמש כאשר התוכן הוא רשימה של פריטים נפרדים.
+
+- "title_two_columns" — כותרת + שתי עמודות. משמש אך ורק כאשר יש השוואה ישירה בין שני דברים הקשורים זה לזה: לפני/אחרי, יתרונות/חסרונות, מצב קיים/מצב מוצע, אופציה א׳/אופציה ב׳. שתי העמודות חייבות להציג שני צדדים של אותו נושא. אין להשתמש כאשר שני הנושאים אינם קשורים ישירות זה לזה או אינם ניתנים להשוואה.
+
+- "title_key_statement" — כותרת + משפט מפתח אחד בלבד. משמש כאשר יש תובנה מרכזית אחת, מספר משמעותי, או מסקנה חזקה שצריכה לבלוט לבד על השקף. אין להשתמש כאשר יש יותר מנקודה אחת להציג.
+
+- "title_infographic" — כותרת + אינפוגרפיקה (דיאגרמה, תרשים זרימה, גרף, או טבלה). משמש כאשר המידע מתאים להצגה ויזואלית: תהליכים עם שלבים רציפים, מבנים היררכיים, יחסי גומלין, חלוקה לקטגוריות, ציר זמן, או נתונים השוואתיים מספריים. אין להשתמש כאשר המידע הוא רשימה פשוטה (השתמש ב-title_bullets) או טקסט נרטיבי (השתמש ב-title_text). השתמש רק כשהצורה הויזואלית מוסיפה ערך מעבר לטקסט רגיל.
+
+- "section_header" — כותרת מפרידה בין חלקים. משמש אך ורק כשקף מעבר בין חלקים שונים של המצגת (למשל: מעבר מ"רקע" ל"ממצאים"). אין להשתמש כשקף תוכן.
+
 
 עבור כל שקף, הצע:
 - כותרת (title) — כותרת קצרה וברורה
@@ -37,6 +46,7 @@ def build_structure_prompt(
   - title_bullets / title_text: 2-4 נושאים
   - title_two_columns: אובייקט עם "right" ו-"left", כל אחד עם 1-3 נושאים + תווית (label)
   - title_key_statement: רשימה עם נושא אחד בלבד
+  - title_infographic: רשימה שהפריט הראשון הוא סוג הדיאגרמה (flowchart/pie/timeline/quadrant/sequence) והשאר הם נושאים
 - has_content (true/false)
 
 כללים:
@@ -75,6 +85,13 @@ def build_structure_prompt(
     }},
     {{
       "slide_num": 3,
+      "title": "תהליך העבודה",
+      "layout": "title_infographic",
+      "topics": ["flowchart", "שלב ראשון", "שלב שני", "שלב שלישי"],
+      "has_content": true
+    }},
+    {{
+      "slide_num": 4,
       "title": "השוואת מצב",
       "layout": "title_two_columns",
       "topics": {{
@@ -84,14 +101,14 @@ def build_structure_prompt(
       "has_content": true
     }},
     {{
-      "slide_num": 4,
+      "slide_num": 5,
       "title": "תובנה מרכזית",
       "layout": "title_key_statement",
       "topics": ["הממצא המרכזי של החקירה"],
       "has_content": true
     }},
     {{
-      "slide_num": 5,
+      "slide_num": 6,
       "title": "פירוט ממצאים",
       "layout": "title_bullets",
       "topics": ["ממצא ראשון", "ממצא שני", "ממצא שלישי"],
@@ -145,6 +162,7 @@ LAYOUT_LIST_SECTION: str = """סוגי Layout זמינים:
 - "title_text" — כותרת + פסקת טקסט רציפה
 - "title_two_columns" — כותרת + שתי עמודות (ימין ושמאל)
 - "title_key_statement" — כותרת + משפט מפתח אחד
+- "title_infographic" — כותרת + אינפוגרפיקה (דיאגרמה, תרשים, גרף)
 - "section_header" — כותרת מפרידה בין חלקים"""
 
 EDIT_RULES_SECTION: str = """כללי עריכה קריטיים:
@@ -221,7 +239,9 @@ def build_deck_edit_prompt(
 
 {EDIT_RESPONSE_FORMAT.format(slide_num_example=2)}
 
-אם לא הצלחת לזהות את האובייקט — החזר:
+אם הבקשה היא עריכה כללית ברמת המצגת (למשל: "קצר את התוכן", "הפוך לפורמלי", "הוסף אימוג'ים") — בצע את השינוי על כל האובייקטים הרלוונטיים בכל השקפים. אין צורך לבקש מהמשתמש מספר שקף או שם אובייקט.
+
+אם לא הצלחת לזהות את האובייקט ומדובר בבקשה ספציפית לאובייקט בודד — החזר:
 {{
   "edits": [],
   "layout_changes": [],
@@ -286,7 +306,6 @@ def build_slide_edit_prompt(
 """
 
 
-
 def build_new_slide_prompt(
     user_instruction: str,
     user_prompt: str,
@@ -294,6 +313,7 @@ def build_new_slide_prompt(
     adjacent_slides_json: str,
     forced_layout: Optional[str] = None,
 ) -> str:
+    """Build the prompt for planning a new slide to add to the deck."""
     layout_instruction = (
         f'השתמש ב-layout: "{forced_layout}" בלבד.'
         if forced_layout
@@ -326,6 +346,7 @@ def build_new_slide_prompt(
 - "title_text" — כותרת + פסקת טקסט רציפה
 - "title_two_columns" — כותרת + שתי עמודות
 - "title_key_statement" — כותרת + משפט מפתח
+- "title_infographic" — כותרת + אינפוגרפיקה (דיאגרמה, תרשים, גרף)
 - "section_header" — כותרת מפרידה
 
 כללים:
@@ -344,4 +365,80 @@ def build_new_slide_prompt(
   "topics": ["נושא ראשון", "נושא שני"],
   "has_content": true
 }}
+"""
+
+
+def build_infographic_prompt(
+    slide_description: str,
+    object_description: str,
+    user_prompt: str,
+    document_text: str,
+) -> str:
+    """Build the prompt for generating a Mermaid infographic."""
+    return f"""אתה יוצר דיאגרמות ותרשימים בפורמט Mermaid עבור שקפי מצגת.
+
+המשימה שלך: חלץ מידע רלוונטי מהמקורות וצור דיאגרמת Mermaid מתאימה.
+
+═══ מקורות מידע ═══
+
+הנחיית המשתמש:
+{user_prompt}
+
+מסמך מקור:
+{document_text or "לא סופק"}
+
+═══════════════════
+
+שקף: {slide_description}
+תיאור: {object_description}
+
+═══ סוגי דיאגרמות Mermaid זמינים ═══
+
+1. תרשים זרימה (flowchart) — לתהליכים, שלבים רציפים, החלטות:
+   graph TD
+       A[שלב ראשון] --> B{{החלטה}}
+       B -->|כן| C[שלב שני]
+       B -->|לא| D[שלב חלופי]
+
+2. תרשים עוגה (pie) — לחלוקה באחוזים, פילוח קטגוריות:
+   pie title כותרת
+       "קטגוריה א" : 40
+       "קטגוריה ב" : 35
+       "קטגוריה ג" : 25
+
+3. ציר זמן (timeline) — לרצף כרונולוגי, שלבי פיתוח:
+   timeline
+       title כותרת
+       שנה/שלב א : אירוע ראשון
+       שנה/שלב ב : אירוע שני
+       שנה/שלב ג : אירוע שלישי
+
+4. דיאגרמת רביעיות (quadrantChart) — לסיווג לפי שני צירים:
+   quadrantChart
+       title כותרת
+       x-axis תווית שמאל --> תווית ימין
+       y-axis תווית למטה --> תווית למעלה
+       quadrant-1 שם רביע 1
+       quadrant-2 שם רביע 2
+       quadrant-3 שם רביע 3
+       quadrant-4 שם רביע 4
+       פריט א: [0.7, 0.8]
+       פריט ב: [0.3, 0.6]
+
+5. דיאגרמת רצף (sequence) — לתקשורת בין גורמים, סדר פעולות:
+   sequenceDiagram
+       participant א as גורם א
+       participant ב as גורם ב
+       א->>ב: פעולה ראשונה
+       ב-->>א: תגובה
+
+═══ הנחיות ═══
+
+- בחר את סוג הדיאגרמה המתאים ביותר למידע.
+- חלץ מידע אמיתי מהמקורות בלבד — אין להמציא נתונים, שמות, או מספרים.
+- כתוב את תוכן הדיאגרמה בעברית.
+- החזר קוד Mermaid תקין בלבד, ללא הסבר, ללא markdown, ללא טקסט נוסף.
+- אם אין מספיק מידע במקורות ליצירת דיאגרמה — החזר בדיוק: "לא סופק מספיק מידע להצגת תוכן זה."
+
+החזר רק את קוד ה-Mermaid:
 """

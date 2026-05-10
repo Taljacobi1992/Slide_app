@@ -116,6 +116,30 @@ def build_key_statement_objects(title: str, topics: list, has_content: bool) -> 
     }]
 
 
+def build_infographic_objects(slide_num: int, title: str, topics: list, has_content: bool) -> list[dict]:
+    """Build content objects for a title_infographic layout."""
+    if not (isinstance(topics, list) and topics):
+        topics_str: str = title
+    else:
+        topics_str = ", ".join(topics)
+
+    infographic_type: str = topics[0] if isinstance(topics, list) and len(topics) > 0 else "flowchart"
+
+    return [{
+        "object_id": "Infographic 1",
+        "object_name": f"אינפוגרפיקה — {title}",
+        "object_type": "infographic",
+        "object_description": (
+            f"אינפוגרפיקה בפורמט Mermaid — הנושא: {title}. "
+            f"תחומים לכיסוי: {topics_str}. "
+            f"סוג דיאגרמה מוצע: {infographic_type}. "
+            f"יש לחלץ את המידע מהמקורות בלבד."
+        ),
+        "infographic_format": "mermaid",
+        "has_source_content": has_content,
+    }]
+
+
 # ── Router ──
 
 def build_content_objects_for_layout(
@@ -132,6 +156,8 @@ def build_content_objects_for_layout(
         return build_two_columns_objects(title, topics, has_content)
     if layout == "title_key_statement":
         return build_key_statement_objects(title, topics, has_content)
+    if layout == "title_infographic":
+        return build_infographic_objects(slide_num, title, topics, has_content)
     # Fallback
     if isinstance(topics, list) and topics:
         return build_bullets_objects(slide_num, title, topics, has_content)

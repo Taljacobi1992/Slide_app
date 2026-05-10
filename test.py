@@ -1,10 +1,12 @@
+from enum import verify
+from mimetypes import MimeTypes
 import os
-from dotenv import load_dotenv
 import requests
 import json
 
-load_dotenv()
-bearer_token = os.getenv("AI_SERVICES_TOKEN")
+from urllib3 import request
+
+bearer_token = "AI_SERVICES_TOKEN"
 
 model_url = "https://ai-services.ai.idt.cts"
 endpoint = "v1/chat/completions"
@@ -21,7 +23,7 @@ body = {
     "messages": [
         {
             "role": "user",
-            "content": "Tell me a bit about LLMs"
+            "content": "What is LLM?"
         }
     ],
     "model": "openai/gpt-oss-120b",
@@ -31,3 +33,6 @@ body = {
 
 res = requests.post(f"{model_url}/{endpoint}", json=body, headers=headers)
 print(json.dumps(res.json(), input=2))
+
+
+

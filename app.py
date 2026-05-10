@@ -1,6 +1,13 @@
-import json
-import gradio as gr
+"""Gradio UI for the slide generation tool."""
 
+import json
+import mimetypes
+from typing import Optional
+
+import gradio as gr
+import requests
+
+from config import settings
 from services.slide_agent import SlideAgent
 from services.structure_agent import generate_outline, edit_outline, outline_to_skeleton
 from services.edit_agent import (
@@ -10,9 +17,45 @@ from services.edit_agent import (
 from utils.state import deck_state, get_slide_choices, detect_slide_count
 from utils.revision_manager import RevisionManager
 from ui.renderers import render_deck_preview, render_outline_html
+from api import router
 
 
-#  Generation Handler
+# ══════════════════════════════════════════════
+#  Document Extraction
+# ══════════════════════════════════════════════
+
+
+def extract_document_text(file) -> str:
+    """Extract text from uploaded document using text processor API."""
+    if file is None:
+        return ""
+
+    file_path: str = file if isinstance(file, str) else file.name
+
+    if file_path.endswith(".txt"):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    try:
+        mime_type, _ = mimetypes.guess_type(file_path)
+        file_name: str = file_path.split("/")[-1].split("\\")[-1]
+        with open(file_path, "rb") as f:
+            files = {"document": (file_name, f, mime_type)}
+            response = requests.post(
+                settings.settings.text_processor_url,
+                files=files,
+                verify=False,
+            )
+            response.raise_for_status()
+            return response.json().get("content", "")
+    except Exception as e:
+        return f"❌ שגיאה בחילוץ טקסט: {str(e)}"
+
+
+# ══════════════════════════════════════════════
+#  Generation Handlers
+# ══════════════════════════════════════════════
+
 
 def handle_generate(file, user_prompt, document_text, slide_count_input):
     has_template = file is not None
@@ -37,7 +80,11 @@ def handle_generate(file, user_prompt, document_text, slide_count_input):
         deck_state["revision_manager"] = rev_manager
         deck_state["pending_outline"] = None
 
-        agent.generate_all_slides(slides=skeleton["slides"], user_prompt=user_prompt, document_text=document_text or "")
+        agent.generate_all_slides(
+            slides=skeleton["slides"],
+            user_prompt=user_prompt,
+            document_text=document_text or "",
+        )
 
         rev_manager.save_revision(skeleton=skeleton, action="יצירה", description="יצירת מצגת ראשונית עם תבנית")
         return ("✅ המצגת נוצרה בהצלחה", render_deck_preview(skeleton),
@@ -86,15 +133,20 @@ def approve_outline():
     deck_state["revision_manager"] = rev_manager
     deck_state["pending_outline"] = None
 
-    agent.generate_all_slides(slides=skeleton["slides"], user_prompt=deck_state.get("user_prompt", ""),
-                             document_text=deck_state.get("document_text", ""))
+    agent.generate_all_slides(
+        slides=skeleton["slides"],
+        user_prompt=deck_state.get("user_prompt", ""),
+        document_text=deck_state.get("document_text", ""),
+    )
 
     rev_manager.save_revision(skeleton=skeleton, action="יצירה", description="יצירת מצגת ממבנה מותאם")
     return ("✅ המצגת נוצרה בהצלחה ממבנה מותאם", render_deck_preview(skeleton),
             json.dumps(skeleton, indent=2, ensure_ascii=False), gr.update(visible=False), "")
 
 
+# ══════════════════════════════════════════════
 #  CSS
+# ══════════════════════════════════════════════
 
 CSS = """
 .rtl-text { direction: rtl; text-align: right; }
@@ -137,7 +189,9 @@ CSS = """
 """
 
 
-#  Gradio
+# ══════════════════════════════════════════════
+#  Gradio UI
+# ══════════════════════════════════════════════
 
 
 def build_app():
@@ -152,6 +206,7 @@ def build_app():
                     gr.Markdown("*ללא תבנית — המערכת תציע מבנה אוטומטי*", elem_classes=["rtl-text"])
                 with gr.Column(scale=2):
                     user_prompt_input = gr.Textbox(label="הנחיית משתמש", lines=3, rtl=True)
+                    document_file = gr.File(label="📄 העלאת מסמך (docx, pdf, txt)", file_types=[".docx", ".pdf", ".txt"])
                     document_text_input = gr.Textbox(label="טקסט מסמך (אופציונלי)", placeholder="הדבק כאן טקסט ממסמך מקור...", lines=5, rtl=True)
                     slide_count_input = gr.Dropdown(label="מספר שקפים (אופציונלי)", choices=["אוטומטי"] + [str(i) for i in range(1, 11)], value="אוטומטי", interactive=True)
 
@@ -202,7 +257,6 @@ def build_app():
                 slide_send_btn = gr.Button("שלח", variant="primary", scale=1)
             slide_revision_dropdown = gr.Dropdown(label="📜 היסטוריית גרסאות", choices=[], interactive=False)
 
-
         with gr.Tab("➕ הוספת שקף"):
             gr.Markdown("### הוסף שקף חדש\nתאר את השקף הרצוי ובחר את מיקומו במצגת.", elem_classes=["rtl-text"])
             with gr.Row():
@@ -226,6 +280,7 @@ def build_app():
                         label="Layout (אופציונלי)",
                         choices=["אוטומטי", "title_bullets", "title_text",
                                  "title_two_columns", "title_key_statement",
+                                 "title_infographic",
                                  "section_header", "title_only"],
                         value="אוטומטי",
                         interactive=True,
@@ -237,9 +292,8 @@ def build_app():
             with gr.Accordion("📄 JSON מעודכן", open=False):
                 add_slide_json = gr.Code(label="JSON", language="json", lines=15)
 
-        
-
         # ── Event Bindings ──
+        document_file.change(fn=extract_document_text, inputs=[document_file], outputs=[document_text_input])
         generate_btn.click(fn=handle_generate, inputs=[template_file, user_prompt_input, document_text_input, slide_count_input], outputs=[generation_status, generation_preview, generation_json, outline_section, outline_preview]).then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())), outputs=[slide_selector, new_slide_position],)
         outline_edit_btn.click(fn=edit_outline, inputs=[outline_edit_input], outputs=[outline_edit_status, outline_preview]).then(fn=lambda: "", outputs=[outline_edit_input])
         approve_btn.click(fn=approve_outline, inputs=[], outputs=[generation_status, generation_preview, generation_json, outline_section, outline_preview]).then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())), outputs=[slide_selector, new_slide_position],)
@@ -254,11 +308,22 @@ def build_app():
         slide_send_btn.click(fn=slide_chat_edit, inputs=[slide_chat_input, slide_selector, slide_chatbot], outputs=[slide_chatbot, slide_preview, slide_revision_dropdown]).then(fn=lambda: "", outputs=[slide_chat_input]).then(fn=lambda: gr.update(choices=deck_state["revision_manager"].get_revision_choices()), outputs=[revision_dropdown])
         slide_chat_input.submit(fn=slide_chat_edit, inputs=[slide_chat_input, slide_selector, slide_chatbot], outputs=[slide_chatbot, slide_preview, slide_revision_dropdown]).then(fn=lambda: "", outputs=[slide_chat_input]).then(fn=lambda: gr.update(choices=deck_state["revision_manager"].get_revision_choices()), outputs=[revision_dropdown])
 
-        add_slide_btn.click(fn=add_slide,inputs=[new_slide_instruction, new_slide_position, new_slide_placement, new_slide_layout],outputs=[add_slide_status, add_slide_preview, add_slide_json, new_slide_position],).then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())),outputs=[slide_selector, new_slide_position],)
+        add_slide_btn.click(fn=add_slide, inputs=[new_slide_instruction, new_slide_position, new_slide_placement, new_slide_layout], outputs=[add_slide_status, add_slide_preview, add_slide_json, new_slide_position],).then(fn=lambda: (gr.update(choices=get_slide_choices()), gr.update(choices=get_slide_choices())), outputs=[slide_selector, new_slide_position],)
 
     return app
 
 
+# ══════════════════════════════════════════════
+#  App Startup
+# ══════════════════════════════════════════════
+
 if __name__ == "__main__":
     app = build_app()
+    app.app.include_router(router)
+
+    print("\n" + "=" * 50)
+    print("🚀 Gradio UI:  http://localhost:7860/?__theme=dark")
+    print("📄 API Docs:   http://localhost:7860/docs")
+    print("=" * 50 + "\n")
+
     app.launch(share=False)

@@ -1,13 +1,16 @@
+"""Slide agent — generates and validates slide content via LLM."""
+
 from langchain_core.prompts import PromptTemplate
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from utils.llm import call_llm
 from config import settings
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 #  Validator Agent
 
 class ValidatorAgent:
-    """Validates generated slide content against original user inputs"""
+    """Validates generated slide content against original user inputs."""
 
     def __init__(self) -> None:
         self.validation_prompt: PromptTemplate = PromptTemplate(
@@ -161,6 +164,7 @@ FEEDBACK: אם נדחה — ציין במפורש אילו פרטים להסיר
 
 class SlideAgent:
     """Generates slide content with an LLM and validates via ValidatorAgent."""
+
     def __init__(self, language: str = "hebrew", max_retries: int = settings.settings.max_validation_retries) -> None:
         self.language: str = language
         self.max_retries: int = max_retries
@@ -204,15 +208,12 @@ class SlideAgent:
 """,
         )
 
-
     def generate_slide(self, slide: dict, user_prompt: str, document_text: str = "") -> dict:
         """Generate content for every object in a slide."""
         for obj in slide["slide_objects"]:
             self._process_single_object(obj, slide["slide_description"], user_prompt, document_text)
         slide["generation_status"] = "completed"
         return slide
-    
-
 
     def generate_all_slides(self, slides: list[dict], user_prompt: str, document_text: str, max_workers: int = 4) -> None:
         """Generate content for all slides in parallel."""
@@ -224,7 +225,6 @@ class SlideAgent:
             for future in as_completed(futures):
                 future.result()
 
-    
     def regenerate_pending_objects(self, slide: dict, user_prompt: str, document_text: str) -> None:
         """Regenerate only objects marked as pending_regeneration in a slide."""
         for obj in slide.get("slide_objects", []):
@@ -245,6 +245,10 @@ class SlideAgent:
 
         if obj.get("has_source_content") is False:
             self._fill_no_source_object(obj)
+            return
+
+        if obj.get("object_type") == "infographic":
+            self._fill_infographic_object(obj, slide_description, user_prompt, document_text)
             return
 
         self._fill_content_object(obj, slide_description, user_prompt, document_text)
@@ -280,6 +284,33 @@ class SlideAgent:
         obj["validation_reason"] = result.get("reason", "")
         obj["validation_feedback"] = result.get("feedback", "")
         obj["validation_raw"] = result.get("raw_response", "")
+
+    def _fill_infographic_object(
+        self, obj: dict, slide_description: str, user_prompt: str, document_text: str
+    ) -> None:
+        """Generate Mermaid infographic content, skip validation."""
+        from prompts import build_infographic_prompt
+
+        prompt: str = build_infographic_prompt(
+            slide_description=slide_description,
+            object_description=obj["object_description"],
+            user_prompt=user_prompt,
+            document_text=document_text,
+        )
+        content: str = call_llm(prompt, role="generation")
+        content = self._clean_mermaid_fences(content)
+
+        if not content or not content.strip():
+            obj["generated_content"] = settings.settings.no_info_message
+            obj["validation_status"] = "failed_validation"
+        else:
+            obj["generated_content"] = content
+            obj["validation_status"] = "validated"
+
+        obj["validation_attempts"] = 1
+        obj["validation_reason"] = "אינפוגרפיקה — דילוג על בדיקה"
+        obj["validation_feedback"] = ""
+        obj["validation_raw"] = "[INFOGRAPHIC - validation skipped]"
 
     # ── Generation + Validation Loop ──
 
@@ -427,3 +458,15 @@ class SlideAgent:
         for word in ["כותרת", "תת"]:
             name = name.replace(word, "")
         return " ".join(name.split())
+
+    @staticmethod
+    def _clean_mermaid_fences(content: str) -> str:
+        """Strip markdown mermaid fences if present."""
+        cleaned: str = content.strip()
+        if cleaned.startswith("```mermaid"):
+            cleaned = "\n".join(cleaned.split("\n")[1:])
+        elif cleaned.startswith("```"):
+            cleaned = "\n".join(cleaned.split("\n")[1:])
+        if cleaned.endswith("```"):
+            cleaned = "\n".join(cleaned.split("\n")[:-1])
+        return cleaned.strip()

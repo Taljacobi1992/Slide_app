@@ -1,6 +1,7 @@
 """LLM utilities — model instances and call helpers for each agent role."""
 
 import os
+import re
 import json
 import httpx
 from dotenv import load_dotenv
@@ -92,10 +93,29 @@ def call_llm_raw(prompt: str) -> str:
 
 
 def parse_llm_json(raw_response: str) -> dict:
-    """Parse a JSON object from an LLM response, stripping markdown fences."""
+    """Parse a JSON object from an LLM response, handling common LLM quirks."""
     cleaned: str = raw_response.strip()
+
+    # Strip markdown fences
     if cleaned.startswith("```"):
         cleaned = "\n".join(cleaned.split("\n")[1:])
     if cleaned.endswith("```"):
         cleaned = "\n".join(cleaned.split("\n")[:-1])
+    cleaned = cleaned.strip()
+
+    # Remove trailing commas before } or ]
+    cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+
+    # Remove newlines inside JSON string values
+    fixed_lines: list[str] = []
+    in_string: bool = False
+    for char in cleaned:
+        if char == '"' and (not fixed_lines or fixed_lines[-1] != "\\"):
+            in_string = not in_string
+        if char == "\n" and in_string:
+            fixed_lines.append(" ")
+        else:
+            fixed_lines.append(char)
+    cleaned = "".join(fixed_lines)
+
     return json.loads(cleaned)

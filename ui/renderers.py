@@ -70,6 +70,24 @@ def _extract_slide_parts(slide: dict) -> tuple[str, list[str]]:
                 col_class: str = "slide-col-right" if obj_id == "Content Right" else "slide-col-left"
                 col_label: str = obj.get("object_name", "")
                 body_parts.append(_render_content_block(content, icon, col_label, col_class))
+            elif obj.get("object_type") == "infographic":
+                escaped_content: str = content.replace("'", "&#39;").replace('"', "&quot;")
+                iframe_html: str = (
+                    f'<iframe srcdoc="'
+                    f'<!DOCTYPE html><html><head>'
+                    f'<script src=&quot;https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js&quot;></script>'
+                    f'</head><body>'
+                    f'<pre class=&quot;mermaid&quot;>{escaped_content}</pre>'
+                    f'<script>mermaid.initialize({{startOnLoad: true, theme: &quot;default&quot;}});</script>'
+                    f'</body></html>'
+                    f'" width="100%" height="350" frameborder="0" style="background: white; border-radius: 8px;"></iframe>'
+                )
+                body_parts.append(
+                    f'<div class="slide-infographic">'
+                    f'<div class="slide-obj-label">{icon} {obj.get("object_name", "")}</div>'
+                    f'{iframe_html}'
+                    f'</div>'
+                )
             else:
                 body_parts.append(_render_content_block(content, icon, obj.get("object_name", "")))
 
@@ -162,7 +180,8 @@ def render_outline_html(outline: dict) -> str:
     slides: list[dict] = outline.get("slides", [])
     total: int = len(slides)
 
-    with_content: int = sum(1 for s in slides if s.get("has_content", True))
+    CONTENT_FREE_LAYOUTS: set[str] = {"section_header", "title_only"}
+    with_content: int = sum(1 for s in slides if s.get("has_content", True) or s.get("layout", "") in CONTENT_FREE_LAYOUTS)
     without_content: int = total - with_content
 
     warning_html: str = ""
@@ -189,8 +208,9 @@ def _render_outline_slide_card(slide: dict) -> str:
     topics = slide.get("topics", [])
     has_content: bool = slide.get("has_content", True)
 
-    content_icon: str = "✅" if has_content else "⚠️"
-    card_class: str = "outline-card" if has_content else "outline-card outline-card-warning"
+    is_content_free_layout: bool = layout in {"section_header", "title_only"}
+    content_icon: str = "✅" if (has_content or is_content_free_layout) else "⚠️"
+    card_class: str = "outline-card" if (has_content or is_content_free_layout) else "outline-card outline-card-warning"
     layout_icon: str = LAYOUT_ICONS.get(layout, "📋")
     layout_label: str = AVAILABLE_LAYOUTS.get(layout, layout)
 
@@ -226,6 +246,12 @@ def _render_outline_content(layout: str, title: str, topics) -> str:
             topics_str: str = ", ".join(topics)
             return f'<p class="outline-desc">פסקה רציפה — הנושא: {title}. תחומים לכיסוי: {topics_str}.</p>'
         return '<p class="outline-desc">פסקת טקסט</p>'
+
+    if layout == "title_infographic":
+        if isinstance(topics, list) and topics:
+            topics_str = ", ".join(topics)
+            return f'<p class="outline-desc">📊 אינפוגרפיקה — הנושא: {title}. תחומים: {topics_str}.</p>'
+        return '<p class="outline-desc">📊 אינפוגרפיקה</p>'
 
     # Default (title_bullets and other)
     if isinstance(topics, list) and topics:
