@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+.env
+.git
+*.ipynb
+app.py
+app_gradio.py
+tests/

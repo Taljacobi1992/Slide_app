@@ -12,72 +12,47 @@ from config import settings
 
 load_dotenv()
 
-#  Credentials
+#  Lazy Model Cache (created on first use, not at import time)
 
-API_KEY: str = os.getenv(settings.model.api_key_env, "")
-BASE_URL: str = f"{settings.model.url}/{settings.model.api_endpoint.split('/', 1)[0]}"
-HTTP_CLIENT = httpx.Client(verify=False)
-HTTP_ASYNC_CLIENT = httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(verify=False))
+_models: dict[str, ChatOpenAI] = {}
 
 
-#  Model Instances
+def _get_model(role: str) -> ChatOpenAI:
+    """Return a cached ChatOpenAI instance for the given role, creating it on first use."""
+    if role in _models:
+        return _models[role]
 
-generation_model: ChatOpenAI = ChatOpenAI(
-    model_name=settings.model.name,
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    http_client=HTTP_CLIENT,
-    http_async_client=HTTP_ASYNC_CLIENT,
-    temperature=settings.agents.generation.temperature,
-    top_p=settings.agents.generation.top_p,
-    max_tokens=settings.agents.generation.max_tokens,
-)
+    api_key: str = os.getenv(settings.model.api_key_env, "")
+    base_url: str = f"{settings.model.url}/{settings.model.api_endpoint.split('/', 1)[0]}"
+    http_client = httpx.Client(verify=False)
+    http_async_client = httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(verify=False))
 
-validation_model: ChatOpenAI = ChatOpenAI(
-    model_name=settings.model.name,
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    http_client=HTTP_CLIENT,
-    http_async_client=HTTP_ASYNC_CLIENT,
-    temperature=settings.agents.validation.temperature,
-    top_p=settings.agents.validation.top_p,
-    max_tokens=settings.agents.validation.max_tokens,
-)
+    agent_configs: dict = {
+        "generation": settings.agents.generation,
+        "validation": settings.agents.validation,
+        "edit": settings.agents.edit,
+        "structure": settings.agents.structure,
+    }
+    agent_cfg = agent_configs.get(role, settings.agents.generation)
 
-edit_model: ChatOpenAI = ChatOpenAI(
-    model_name=settings.model.name,
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    http_client=HTTP_CLIENT,
-    http_async_client=HTTP_ASYNC_CLIENT,
-    temperature=settings.agents.edit.temperature,
-    top_p=settings.agents.edit.top_p,
-    max_tokens=settings.agents.edit.max_tokens,
-)
-
-structure_model: ChatOpenAI = ChatOpenAI(
-    model_name=settings.model.name,
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    http_client=HTTP_CLIENT,
-    http_async_client=HTTP_ASYNC_CLIENT,
-    temperature=settings.agents.structure.temperature,
-    top_p=settings.agents.structure.top_p,
-    max_tokens=settings.agents.structure.max_tokens,
-)
+    _models[role] = ChatOpenAI(
+        model_name=settings.model.name,
+        api_key=api_key,
+        base_url=base_url,
+        http_client=http_client,
+        http_async_client=http_async_client,
+        temperature=agent_cfg.temperature,
+        top_p=agent_cfg.top_p,
+        max_tokens=agent_cfg.max_tokens,
+    )
+    return _models[role]
 
 
 #  Call Helpers
 
 def call_llm(prompt: str, role: str = "generation") -> str:
     """Send a prompt to the LLM using the model configured for the given role."""
-    models: dict[str, ChatOpenAI] = {
-        "generation": generation_model,
-        "validation": validation_model,
-        "edit": edit_model,
-        "structure": structure_model,
-    }
-    model: ChatOpenAI = models.get(role, generation_model)
+    model: ChatOpenAI = _get_model(role)
 
     try:
         response = model.invoke([HumanMessage(content=prompt)])
