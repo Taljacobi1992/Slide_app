@@ -1,6 +1,7 @@
 from enum import verify
 from mimetypes import MimeTypes
 import os
+from fastapi import FastAPI
 import requests
 import json
 
@@ -33,6 +34,3 @@ body = {
 
 res = requests.post(f"{model_url}/{endpoint}", json=body, headers=headers)
 print(json.dumps(res.json(), input=2))
-
-
-

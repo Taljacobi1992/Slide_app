@@ -1,21 +1,14 @@
 """FastAPI API routes for the slide generation tool."""
 
-import json
-import mimetypes
 from typing import Optional
 
-import requests
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from config import settings
 from services.slide_agent import SlideAgent
 from services.structure_agent import generate_outline, edit_outline, outline_to_skeleton
-from services.edit_agent import (
-    deck_chat_edit, slide_chat_edit,
-    restore_revision, export_json, add_slide,
-)
-from utils.state import deck_state, get_slide_choices, detect_slide_count
+from services.edit_agent import deck_chat_edit, slide_chat_edit, add_slide
+from utils.state import deck_state, detect_slide_count
 from utils.revision_manager import RevisionManager
 
 
@@ -58,16 +51,20 @@ class AddSlideRequest(BaseModel):
     layout: str = "אוטומטי"
 
 
-class RestoreRevisionRequest(BaseModel):
-    """Request body for restoring a revision."""
-    revision_id: int
-
 
 # ══════════════════════════════════════════════
 #  Router
 # ══════════════════════════════════════════════
 
 router = APIRouter(prefix="/api")
+
+
+# ── Health ──
+
+@router.get("/health")
+async def health_check() -> dict:
+    """Health check endpoint."""
+    return {"status": "ok"}
 
 
 # ── Generation ──
@@ -213,84 +210,3 @@ async def api_add_slide(req: AddSlideRequest) -> dict:
         "message": status_msg,
         "skeleton": deck_state["skeleton"],
     }
-
-
-# ── Revisions ──
-
-@router.post("/revision/restore")
-async def api_restore_revision(req: RestoreRevisionRequest) -> dict:
-    """Restore the deck to a previous revision."""
-    revision_selection: str = f"[גרסה {req.revision_id}]"
-    message, full_json = restore_revision(revision_selection)
-    return {
-        "status": "success",
-        "message": message,
-        "skeleton": deck_state["skeleton"],
-    }
-
-
-@router.get("/revisions")
-async def api_get_revisions() -> dict:
-    """Get the list of available revisions."""
-    rev_manager = deck_state.get("revision_manager")
-    choices: list[str] = rev_manager.get_revision_choices() if rev_manager else []
-    return {"revisions": choices}
-
-
-# ── Read Endpoints ──
-
-@router.get("/slides")
-async def api_get_slides() -> dict:
-    """Get the list of slides for selection."""
-    return {"slides": get_slide_choices()}
-
-
-@router.get("/slide/{slide_num}")
-async def api_get_slide(slide_num: str) -> dict:
-    """Get a single slide's details."""
-    if deck_state["skeleton"] is None:
-        raise HTTPException(status_code=400, detail="אין מצגת")
-
-    for slide in deck_state["skeleton"]["slides"]:
-        if str(slide.get("slide_num", "")) == slide_num:
-            return {"slide": slide}
-
-    raise HTTPException(status_code=404, detail="שקף לא נמצא")
-
-
-@router.get("/export")
-async def api_export() -> dict:
-    """Export the current deck skeleton as JSON."""
-    if deck_state["skeleton"] is None:
-        raise HTTPException(status_code=400, detail="אין מצגת לייצוא")
-    return {"skeleton": deck_state["skeleton"]}
-
-
-# ── Document Processing ──
-
-@router.post("/document/extract")
-async def api_extract_document(file: UploadFile = File(...)) -> dict:
-    """Extract text from an uploaded document via text processor."""
-    allowed: set[str] = {".docx", ".pdf", ".txt"}
-    ext: str = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-
-    if ext not in allowed:
-        raise HTTPException(status_code=400, detail=f"סוג קובץ לא נתמך: {ext}")
-
-    if ext == ".txt":
-        content: bytes = await file.read()
-        return {"content": content.decode("utf-8")}
-
-    try:
-        mime_type, _ = mimetypes.guess_type(file.filename)
-        file_content: bytes = await file.read()
-        files = {"document": (file.filename, file_content, mime_type)}
-        response = requests.post(
-            settings.settings.text_processor_url,
-            files=files,
-            verify=False,
-        )
-        response.raise_for_status()
-        return {"content": response.json().get("content", "")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"שגיאה בחילוץ טקסט: {str(e)}")

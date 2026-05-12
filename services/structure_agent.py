@@ -28,8 +28,19 @@ def generate_outline(user_prompt: str, document_text: str, slide_count: Optional
     """Generate a proposed presentation outline from prompt and document text."""
     count_instruction, count_rule = _build_count_instructions(slide_count)
     prompt: str = build_structure_prompt(user_prompt, document_text, count_instruction, count_rule)
-    raw_response: str = call_llm_raw(prompt)
-    return parse_llm_json(raw_response)
+
+    max_attempts: int = 3
+    last_error: str = ""
+
+    for attempt in range(1, max_attempts + 1):
+        raw_response: str = call_llm_raw(prompt)
+        try:
+            return parse_llm_json(raw_response)
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = str(e)
+            print(f"[Structure] JSON parse failed (attempt {attempt}/{max_attempts}): {last_error}")
+
+    raise ValueError(f"נכשל לאחר {max_attempts} ניסיונות: {last_error}")
 
 
 #  Outline Editing

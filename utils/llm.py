@@ -103,19 +103,30 @@ def parse_llm_json(raw_response: str) -> dict:
         cleaned = "\n".join(cleaned.split("\n")[:-1])
     cleaned = cleaned.strip()
 
+    # Extract just the JSON object — ignore any text before/after
+    first_brace: int = cleaned.find("{")
+    last_brace: int = cleaned.rfind("}")
+    if first_brace != -1 and last_brace != -1:
+        cleaned = cleaned[first_brace:last_brace + 1]
+
     # Remove trailing commas before } or ]
     cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
 
+    # Remove single-line comments
+    cleaned = re.sub(r"//.*?\n", "\n", cleaned)
+
     # Remove newlines inside JSON string values
-    fixed_lines: list[str] = []
+    fixed_chars: list[str] = []
     in_string: bool = False
+    prev_char: str = ""
     for char in cleaned:
-        if char == '"' and (not fixed_lines or fixed_lines[-1] != "\\"):
+        if char == '"' and prev_char != "\\":
             in_string = not in_string
         if char == "\n" and in_string:
-            fixed_lines.append(" ")
+            fixed_chars.append(" ")
         else:
-            fixed_lines.append(char)
-    cleaned = "".join(fixed_lines)
+            fixed_chars.append(char)
+        prev_char = char
+    cleaned = "".join(fixed_chars)
 
     return json.loads(cleaned)

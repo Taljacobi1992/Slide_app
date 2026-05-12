@@ -71,14 +71,26 @@ def _extract_slide_parts(slide: dict) -> tuple[str, list[str]]:
                 col_label: str = obj.get("object_name", "")
                 body_parts.append(_render_content_block(content, icon, col_label, col_class))
             elif obj.get("object_type") == "infographic":
-                escaped_content: str = content.replace("'", "&#39;").replace('"', "&quot;")
+                escaped_content: str = content.replace("'", "&#39;").replace('"', "&quot;").replace("\n", " ")
                 iframe_html: str = (
                     f'<iframe srcdoc="'
                     f'<!DOCTYPE html><html><head>'
-                    f'<script src=&quot;https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js&quot;></script>'
+                    f'<script src=&quot;https://unpkg.com/@antv/g6@4/dist/g6.min.js&quot;></script>'
+                    f'<style>body{{margin:0;direction:rtl;}} #container{{width:100%;height:320px;}}</style>'
                     f'</head><body>'
-                    f'<pre class=&quot;mermaid&quot;>{escaped_content}</pre>'
-                    f'<script>mermaid.initialize({{startOnLoad: true, theme: &quot;default&quot;}});</script>'
+                    f'<div id=&quot;container&quot;></div>'
+                    f'<script>'
+                    f'const data = {escaped_content};'
+                    f'const graph = new G6.Graph({{container:&quot;container&quot;,width:680,height:320,'
+                    f'layout:{{type:&quot;dagre&quot;,rankdir:&quot;TB&quot;,nodesep:30,ranksep:50}},'
+                    f'defaultNode:{{type:&quot;rect&quot;,size:[160,40],'
+                    f'style:{{fill:&quot;#e8f4fd&quot;,stroke:&quot;#1e3a5f&quot;,radius:8}},'
+                    f'labelCfg:{{style:{{fill:&quot;#1e3a5f&quot;,fontSize:13}}}}}},'
+                    f'defaultEdge:{{type:&quot;polyline&quot;,'
+                    f'style:{{stroke:&quot;#2d5f8a&quot;,endArrow:true}}}}'
+                    f'}});'
+                    f'graph.data(data);graph.render();graph.fitView();'
+                    f'</script>'
                     f'</body></html>'
                     f'" width="100%" height="350" frameborder="0" style="background: white; border-radius: 8px;"></iframe>'
                 )

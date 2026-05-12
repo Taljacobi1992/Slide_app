@@ -298,7 +298,7 @@ class SlideAgent:
             document_text=document_text,
         )
         content: str = call_llm(prompt, role="generation")
-        content = self._clean_mermaid_fences(content)
+        content = self._clean_code_fences(content)
 
         if not content or not content.strip():
             obj["generated_content"] = settings.settings.no_info_message
@@ -460,10 +460,12 @@ class SlideAgent:
         return " ".join(name.split())
 
     @staticmethod
-    def _clean_mermaid_fences(content: str) -> str:
-        """Strip markdown mermaid fences if present."""
+    def _clean_code_fences(content: str) -> str:
+        """Strip markdown code fences if present."""
         cleaned: str = content.strip()
-        if cleaned.startswith("```mermaid"):
+        if cleaned.startswith("```json"):
+            cleaned = "\n".join(cleaned.split("\n")[1:])
+        elif cleaned.startswith("```mermaid"):
             cleaned = "\n".join(cleaned.split("\n")[1:])
         elif cleaned.startswith("```"):
             cleaned = "\n".join(cleaned.split("\n")[1:])
