@@ -130,12 +130,12 @@ def build_infographic_objects(slide_num: int, title: str, topics: list, has_cont
         "object_name": f"אינפוגרפיקה — {title}",
         "object_type": "infographic",
         "object_description": (
-            f"אינפוגרפיקה בפורמט antv_g6 — הנושא: {title}. "
+            f"אינפוגרפיקה בפורמט antv — הנושא: {title}. "
             f"תחומים לכיסוי: {topics_str}. "
             f"סוג דיאגרמה מוצע: {infographic_type}. "
             f"יש לחלץ את המידע מהמקורות בלבד."
         ),
-        "infographic_format": "antv_g6",
+        "infographic_format": "antv",
         "has_source_content": has_content,
     }]
 

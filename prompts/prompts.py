@@ -367,17 +367,16 @@ def build_new_slide_prompt(
 }}
 """
 
-
 def build_infographic_prompt(
     slide_description: str,
     object_description: str,
     user_prompt: str,
     document_text: str,
 ) -> str:
-    """Build the prompt for generating an AntV G6 infographic."""
-    return f"""אתה יוצר דיאגרמות ותרשימים בפורמט AntV G6 JSON עבור שקפי מצגת.
+    """Build the prompt for generating an AntV G6/G2 infographic."""
+    return f"""אתה יוצר דיאגרמות ותרשימים בפורמט AntV JSON עבור שקפי מצגת.
 
-המשימה שלך: חלץ מידע רלוונטי מהמקורות וצור דיאגרמת G6 מתאימה.
+המשימה שלך: חלץ מידע רלוונטי מהמקורות וצור תרשים מתאים.
 
 ═══ מקורות מידע ═══
 
@@ -392,70 +391,105 @@ def build_infographic_prompt(
 שקף: {slide_description}
 תיאור: {object_description}
 
-═══ פורמט G6 JSON ═══
+═══ בחירת פורמט ═══
 
-הפלט חייב להיות JSON תקין עם nodes ו-edges בלבד.
+בחר את הפורמט המתאים לפי סוג המידע:
 
-דוגמה — תרשים זרימה (תהליך עם שלבים):
+▶ G6 (דיאגרמות) — השתמש כאשר המידע מתאר תהליך, שלבים, מבנה היררכי, או יחסי גומלין.
+▶ G2 (תרשימים) — השתמש כאשר המידע מתאר כמויות, השוואות מספריות, חלוקה באחוזים, או מגמות.
+
+═══ פורמט G6 — דיאגרמות ═══
+
+תרשים זרימה (תהליך עם שלבים):
 {{
   "nodes": [
     {{"id": "1", "label": "שלב ראשון"}},
     {{"id": "2", "label": "שלב שני"}},
-    {{"id": "3", "label": "שלב שלישי"}},
-    {{"id": "4", "label": "שלב רביעי"}}
+    {{"id": "3", "label": "שלב שלישי"}}
   ],
   "edges": [
     {{"source": "1", "target": "2"}},
-    {{"source": "2", "target": "3"}},
-    {{"source": "3", "target": "4"}}
+    {{"source": "2", "target": "3"}}
   ]
 }}
 
-דוגמה — מבנה היררכי (עץ):
+מבנה היררכי (עץ):
 {{
   "nodes": [
     {{"id": "root", "label": "נושא ראשי"}},
     {{"id": "a", "label": "ענף א"}},
     {{"id": "b", "label": "ענף ב"}},
     {{"id": "a1", "label": "תת-נושא א1"}},
-    {{"id": "a2", "label": "תת-נושא א2"}},
     {{"id": "b1", "label": "תת-נושא ב1"}}
   ],
   "edges": [
     {{"source": "root", "target": "a"}},
     {{"source": "root", "target": "b"}},
     {{"source": "a", "target": "a1"}},
-    {{"source": "a", "target": "a2"}},
     {{"source": "b", "target": "b1"}}
   ]
 }}
 
-דוגמה — תהליך עם הסתעפות (החלטה):
+תהליך עם הסתעפות:
 {{
   "nodes": [
     {{"id": "start", "label": "התחלה"}},
     {{"id": "check", "label": "בדיקה"}},
     {{"id": "yes", "label": "עבר"}},
-    {{"id": "no", "label": "נכשל"}},
-    {{"id": "end", "label": "סיום"}}
+    {{"id": "no", "label": "נכשל"}}
   ],
   "edges": [
     {{"source": "start", "target": "check"}},
     {{"source": "check", "target": "yes", "label": "כן"}},
-    {{"source": "check", "target": "no", "label": "לא"}},
-    {{"source": "yes", "target": "end"}},
-    {{"source": "no", "target": "start"}}
+    {{"source": "check", "target": "no", "label": "לא"}}
   ]
+}}
+
+═══ פורמט G2 — תרשימים ═══
+
+תרשים עמודות (השוואה בין קטגוריות):
+{{
+  "type": "interval",
+  "data": [
+    {{"category": "קטגוריה א", "value": 40}},
+    {{"category": "קטגוריה ב", "value": 65}},
+    {{"category": "קטגוריה ג", "value": 30}}
+  ],
+  "encode": {{"x": "category", "y": "value", "color": "category"}}
+}}
+
+תרשים עוגה (חלוקה באחוזים):
+{{
+  "type": "interval",
+  "coordinate": {{"type": "theta"}},
+  "data": [
+    {{"category": "חלק א", "value": 45}},
+    {{"category": "חלק ב", "value": 30}},
+    {{"category": "חלק ג", "value": 25}}
+  ],
+  "encode": {{"y": "value", "color": "category"}},
+  "transform": [{{"type": "stackY"}}]
+}}
+
+תרשים קווי (מגמה לאורך זמן):
+{{
+  "type": "line",
+  "data": [
+    {{"period": "רבעון 1", "value": 20}},
+    {{"period": "רבעון 2", "value": 35}},
+    {{"period": "רבעון 3", "value": 28}},
+    {{"period": "רבעון 4", "value": 50}}
+  ],
+  "encode": {{"x": "period", "y": "value"}}
 }}
 
 ═══ הנחיות ═══
 
-- בחר את סוג הדיאגרמה המתאים ביותר למידע (תהליך, היררכיה, או הסתעפות).
+- בחר G6 לתהליכים/מבנים, G2 לנתונים/השוואות — אל תערבב ביניהם.
 - חלץ מידע אמיתי מהמקורות בלבד — אין להמציא נתונים, שמות, או מספרים.
-- כל label חייב להיות בעברית, קצר וברור (2-5 מילים).
-- כל node חייב לכלול id ו-label.
-- כל edge חייב לכלול source ו-target (ואופציונלית label).
-- ודא שכל source ו-target ב-edges מתייחסים ל-id קיים ב-nodes.
+- כל טקסט (label, category, period) חייב להיות בעברית, קצר וברור.
+- G6: כל node חייב id ו-label. כל edge חייב source ו-target תואמים ל-id קיים.
+- G2: כל פריט ב-data חייב שדות תואמים ל-encode. ערכי value חייבים להיות מספרים.
 - החזר JSON תקין בלבד, ללא הסבר, ללא markdown, ללא טקסט נוסף.
 - אם אין מספיק מידע — החזר בדיוק: "לא סופק מספיק מידע להצגת תוכן זה."
 
